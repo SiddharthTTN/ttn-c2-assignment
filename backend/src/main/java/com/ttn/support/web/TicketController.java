@@ -3,11 +3,16 @@ package com.ttn.support.web;
 import com.ttn.support.domain.TicketStatus;
 import com.ttn.support.service.TicketService;
 import com.ttn.support.web.dto.CommentRequest;
+import com.ttn.support.web.dto.CommentResponse;
 import com.ttn.support.web.dto.CreateTicketRequest;
 import com.ttn.support.web.dto.StatusChangeRequest;
 import com.ttn.support.web.dto.TicketListResponse;
 import com.ttn.support.web.dto.TicketResponse;
+import com.ttn.support.web.dto.UpdateTicketPatchSchema;
 import com.ttn.support.web.dto.UpdateTicketRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,8 +60,18 @@ public class TicketController {
         return ticketService.get(id);
     }
 
+    @Operation(
+            requestBody =
+                    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            content =
+                                    @Content(
+                                            schema =
+                                                    @Schema(
+                                                            name = "UpdateTicketRequest",
+                                                            implementation = UpdateTicketPatchSchema.class))))
     @PatchMapping("/{id}")
-    public TicketResponse update(@PathVariable String id, @Valid @RequestBody UpdateTicketRequest request) {
+    public TicketResponse update(@PathVariable String id, @RequestBody UpdateTicketRequest request) {
         return ticketService.update(id, request);
     }
 
@@ -66,7 +81,7 @@ public class TicketController {
     }
 
     @PostMapping("/{id}/comments")
-    public ResponseEntity<TicketResponse> addComment(
+    public ResponseEntity<CommentResponse> addComment(
             @PathVariable String id, @Valid @RequestBody CommentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.addComment(id, request.getBody()));
     }

@@ -50,6 +50,9 @@ public class Ticket {
     @Column(name = "knowledge_version", nullable = false)
     private long knowledgeVersion;
 
+    @Column(name = "knowledge_retry_count", nullable = false)
+    private long knowledgeRetryCount;
+
     @Version
     @Column(nullable = false)
     private long version;
@@ -138,6 +141,14 @@ public class Ticket {
 
     public void setKnowledgeVersion(long knowledgeVersion) {
         this.knowledgeVersion = knowledgeVersion;
+    }
+
+    public long getKnowledgeRetryCount() {
+        return knowledgeRetryCount;
+    }
+
+    public void setKnowledgeRetryCount(long knowledgeRetryCount) {
+        this.knowledgeRetryCount = knowledgeRetryCount;
     }
 
     public long getVersion() {

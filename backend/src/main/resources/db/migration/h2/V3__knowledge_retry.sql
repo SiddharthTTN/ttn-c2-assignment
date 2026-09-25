@@ -1,0 +1,1 @@
+ALTER TABLE ticket ADD COLUMN IF NOT EXISTS knowledge_retry_count BIGINT NOT NULL DEFAULT 0;

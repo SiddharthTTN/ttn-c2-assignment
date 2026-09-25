@@ -25,7 +25,7 @@ public class KnowledgeRefreshScheduler {
         this.knowledgeRefreshService = knowledgeRefreshService;
     }
 
-    @Scheduled(fixedDelayString = "${app.knowledge-retry.delay-ms:30000}")
+    @Scheduled(fixedDelayString = "${app.knowledge-retry.delay-ms}")
     public void retryPending() {
         List<Ticket> pending = ticketRepository.findAll().stream()
                 .filter(t -> t.getKnowledgeState() == KnowledgeState.PENDING)

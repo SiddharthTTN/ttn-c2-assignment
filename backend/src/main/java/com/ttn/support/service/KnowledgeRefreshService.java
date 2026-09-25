@@ -37,6 +37,7 @@ public class KnowledgeRefreshService {
     private final TicketEmbeddingService embeddingService;
     private final EmbeddingCodec embeddingCodec;
     private final Environment environment;
+    private final KnowledgeFailureRecorder knowledgeFailureRecorder;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -49,7 +50,8 @@ public class KnowledgeRefreshService {
             ContentHasher contentHasher,
             TicketEmbeddingService embeddingService,
             EmbeddingCodec embeddingCodec,
-            Environment environment) {
+            Environment environment,
+            KnowledgeFailureRecorder knowledgeFailureRecorder) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.knowledgeRepository = knowledgeRepository;
@@ -58,6 +60,7 @@ public class KnowledgeRefreshService {
         this.embeddingService = embeddingService;
         this.embeddingCodec = embeddingCodec;
         this.environment = environment;
+        this.knowledgeFailureRecorder = knowledgeFailureRecorder;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -99,12 +102,12 @@ public class KnowledgeRefreshService {
             }
 
             ticket.setKnowledgeState(KnowledgeState.READY);
+            ticket.setKnowledgeRetryCount(0);
             ticket.setUpdatedAt(Instant.now());
             ticketRepository.save(ticket);
             log.info("Knowledge refresh succeeded ticketId={} version={}", ticketId, ticket.getKnowledgeVersion());
         } catch (Exception ex) {
-            ticket.setKnowledgeState(KnowledgeState.PENDING);
-            ticketRepository.save(ticket);
+            knowledgeFailureRecorder.recordFailure(ticketId);
             log.warn("Knowledge refresh failed ticketId={} reason={}", ticketId, ex.getMessage());
             throw ex;
         }

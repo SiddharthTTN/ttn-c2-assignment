@@ -14,7 +14,6 @@ import com.ttn.support.domain.TicketPriority;
 import com.ttn.support.domain.TicketStatus;
 import com.ttn.support.web.dto.CreateTicketRequest;
 import com.ttn.support.web.dto.StatusChangeRequest;
-import com.ttn.support.web.dto.UpdateTicketRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -72,11 +71,9 @@ class TicketApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").exists());
 
-        UpdateTicketRequest update = new UpdateTicketRequest();
-        update.setTitle("Updated payment issue");
         mockMvc.perform(patch("/api/tickets/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(update)))
+                        .content("{\"title\":\"Updated payment issue\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Updated payment issue"));
 
@@ -84,6 +81,11 @@ class TicketApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"body\":\"Investigating logs\"}"))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.ticketId").value(id))
+                .andExpect(jsonPath("$.body").value("Investigating logs"));
+
+        mockMvc.perform(get("/api/tickets/" + id))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.comments", hasSize(1)));
 
         transition(id, TicketStatus.IN_PROGRESS);

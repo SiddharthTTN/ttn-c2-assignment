@@ -23,6 +23,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ApiErrorResponse("Validation failed", details));
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequestException(BadRequestException ex) {
+        return ResponseEntity.badRequest().body(new ApiErrorResponse(ex.getMessage(), List.of()));
+    }
+
     @ExceptionHandler({
         HttpMessageNotReadableException.class,
         MethodArgumentTypeMismatchException.class,

@@ -1,30 +1,26 @@
 package com.ttn.support.web.dto;
 
 import com.ttn.support.domain.TicketPriority;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-public class CreateTicketRequest {
+@Schema(name = "UpdateTicketRequest", description = "Partial ticket update; omitted fields are unchanged.")
+public class UpdateTicketPatchSchema {
 
-    @NotBlank
-    @Size(max = 200)
+    @Schema(maxLength = 200)
     private String title;
 
-    @NotBlank
-    @Size(max = 20000)
+    @Schema(maxLength = 20000)
     private String description;
 
-    @NotNull
     private TicketPriority priority;
 
-    @Size(max = 120)
+    @Schema(maxLength = 120, nullable = true)
     private String assignee;
 
-    @Size(max = 80)
+    @Schema(maxLength = 80, nullable = true)
     private String category;
 
-    @Size(max = 20000)
+    @Schema(maxLength = 20000, nullable = true)
     private String resolutionNotes;
 
     public String getTitle() {

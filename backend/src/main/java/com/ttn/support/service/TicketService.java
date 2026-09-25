@@ -8,6 +8,8 @@ import com.ttn.support.domain.TicketStatus;
 import com.ttn.support.repository.TicketCommentRepository;
 import com.ttn.support.repository.TicketRepository;
 import com.ttn.support.repository.TicketSearchRepository;
+import com.ttn.support.web.UpdateTicketRequestValidator;
+import com.ttn.support.web.dto.CommentResponse;
 import com.ttn.support.web.dto.CreateTicketRequest;
 import com.ttn.support.web.dto.TicketResponse;
 import com.ttn.support.web.dto.UpdateTicketRequest;
@@ -30,6 +32,7 @@ public class TicketService {
     private final SearchPatternBuilder searchPatternBuilder;
     private final StatusTransitionService statusTransitionService;
     private final KnowledgeRefreshPublisher knowledgeRefreshPublisher;
+    private final UpdateTicketRequestValidator updateTicketRequestValidator;
 
     public TicketService(
             TicketRepository ticketRepository,
@@ -38,7 +41,8 @@ public class TicketService {
             TicketIdGenerator ticketIdGenerator,
             SearchPatternBuilder searchPatternBuilder,
             StatusTransitionService statusTransitionService,
-            KnowledgeRefreshPublisher knowledgeRefreshPublisher) {
+            KnowledgeRefreshPublisher knowledgeRefreshPublisher,
+            UpdateTicketRequestValidator updateTicketRequestValidator) {
         this.ticketRepository = ticketRepository;
         this.ticketSearchRepository = ticketSearchRepository;
         this.commentRepository = commentRepository;
@@ -46,6 +50,7 @@ public class TicketService {
         this.searchPatternBuilder = searchPatternBuilder;
         this.statusTransitionService = statusTransitionService;
         this.knowledgeRefreshPublisher = knowledgeRefreshPublisher;
+        this.updateTicketRequestValidator = updateTicketRequestValidator;
     }
 
     @Transactional
@@ -86,35 +91,37 @@ public class TicketService {
 
     @Transactional
     public TicketResponse update(String id, UpdateTicketRequest request) {
+        updateTicketRequestValidator.validate(request);
         Ticket ticket = ticketRepository.findById(id).orElseThrow(() -> new NotFoundException("Ticket not found"));
         boolean changed = false;
-        if (request.getTitle() != null) {
+        if (request.isTitlePresent()) {
             ticket.setTitle(request.getTitle());
             changed = true;
         }
-        if (request.getDescription() != null) {
+        if (request.isDescriptionPresent()) {
             ticket.setDescription(request.getDescription());
             changed = true;
         }
-        if (request.getPriority() != null) {
+        if (request.isPriorityPresent()) {
             ticket.setPriority(request.getPriority());
             changed = true;
         }
-        if (request.getAssignee() != null) {
+        if (request.isAssigneePresent()) {
             ticket.setAssignee(request.getAssignee());
             changed = true;
         }
-        if (request.getCategory() != null) {
+        if (request.isCategoryPresent()) {
             ticket.setCategory(request.getCategory());
             changed = true;
         }
-        if (request.getResolutionNotes() != null) {
+        if (request.isResolutionNotesPresent()) {
             ticket.setResolutionNotes(request.getResolutionNotes());
             changed = true;
         }
         if (changed) {
             ticket.setKnowledgeVersion(ticket.getKnowledgeVersion() + 1);
             ticket.setKnowledgeState(KnowledgeState.PENDING);
+            ticket.setKnowledgeRetryCount(0);
             ticket.setUpdatedAt(Instant.now());
             ticketRepository.save(ticket);
             knowledgeRefreshPublisher.scheduleAfterCommit(ticket.getId());
@@ -138,6 +145,7 @@ public class TicketService {
                 ticket.setStatus(requested);
                 ticket.setKnowledgeVersion(ticket.getKnowledgeVersion() + 1);
                 ticket.setKnowledgeState(KnowledgeState.PENDING);
+                ticket.setKnowledgeRetryCount(0);
                 ticket.setUpdatedAt(Instant.now());
                 ticketRepository.save(ticket);
                 knowledgeRefreshPublisher.scheduleAfterCommit(ticket.getId());
@@ -150,7 +158,7 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketResponse addComment(String id, String body) {
+    public CommentResponse addComment(String id, String body) {
         Ticket ticket = ticketRepository.findById(id).orElseThrow(() -> new NotFoundException("Ticket not found"));
         TicketComment comment = new TicketComment();
         comment.setTicketId(id);
@@ -159,11 +167,11 @@ public class TicketService {
         commentRepository.save(comment);
         ticket.setKnowledgeVersion(ticket.getKnowledgeVersion() + 1);
         ticket.setKnowledgeState(KnowledgeState.PENDING);
+        ticket.setKnowledgeRetryCount(0);
         ticket.setUpdatedAt(Instant.now());
         ticketRepository.save(ticket);
         knowledgeRefreshPublisher.scheduleAfterCommit(id);
-        List<TicketComment> comments = commentRepository.findByTicketIdOrderByCreatedAtAscIdAsc(id);
-        return toResponse(ticket, comments);
+        return CommentResponse.from(comment);
     }
 
     private TicketResponse toResponse(Ticket ticket, List<TicketComment> comments) {
