@@ -24,6 +24,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class KnowledgeRefreshService {
@@ -69,8 +71,15 @@ public class KnowledgeRefreshService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void refreshTicket(String ticketId) {
-        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+        Ticket ticket = ticketRepository.findByIdForKnowledgeRefresh(ticketId).orElse(null);
         if (ticket == null) {
+            return;
+        }
+        if (ticket.getKnowledgeState() != KnowledgeState.PENDING) {
+            log.debug(
+                    "Skipping knowledge refresh ticketId={} state={}",
+                    ticketId,
+                    ticket.getKnowledgeState());
             return;
         }
         try {
@@ -111,7 +120,7 @@ public class KnowledgeRefreshService {
             ticketRepository.save(ticket);
             log.info("Knowledge refresh succeeded ticketId={} version={}", ticketId, ticket.getKnowledgeVersion());
         } catch (Exception ex) {
-            knowledgeFailureRecorder.recordFailure(ticketId);
+            scheduleFailureRecording(ticketId);
             log.warn("Knowledge refresh failed ticketId={} reason={}", ticketId, ex.getMessage());
             throw ex;
         }
@@ -185,6 +194,21 @@ public class KnowledgeRefreshService {
                     i,
                     knowledgeChunkFormatter.formatChunk(ticket, sourceType, content)));
         }
+    }
+
+    private void scheduleFailureRecording(String ticketId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            knowledgeFailureRecorder.recordFailure(ticketId);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    knowledgeFailureRecorder.recordFailure(ticketId);
+                }
+            }
+        });
     }
 
     private boolean isPostgresProfile() {

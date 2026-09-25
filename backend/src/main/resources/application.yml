@@ -15,6 +15,7 @@ app:
   knowledge-retry:
     max-attempts: 5
     delay-ms: 30000
+    initial-delay-ms: 5000
 
 springdoc:
   api-docs:

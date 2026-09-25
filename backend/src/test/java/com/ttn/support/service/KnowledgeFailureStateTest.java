@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.ttn.support.domain.KnowledgeState;
 import com.ttn.support.domain.Ticket;
+import org.junit.jupiter.api.BeforeEach;
 import com.ttn.support.rag.TicketEmbeddingService;
 import com.ttn.support.repository.TicketRepository;
 import java.util.List;
@@ -26,6 +27,14 @@ class KnowledgeFailureStateTest {
 
     @Autowired
     private TicketRepository ticketRepository;
+
+    @BeforeEach
+    void resetTicketToPending() {
+        Ticket ticket = ticketRepository.findById("TKT-1001").orElseThrow();
+        ticket.setKnowledgeState(KnowledgeState.PENDING);
+        ticket.setKnowledgeRetryCount(0);
+        ticketRepository.save(ticket);
+    }
 
     @TestConfiguration
     static class FailingEmbeddingConfig {

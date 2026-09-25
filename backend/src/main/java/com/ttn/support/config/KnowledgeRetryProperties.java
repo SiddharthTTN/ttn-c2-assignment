@@ -13,6 +13,9 @@ public class KnowledgeRetryProperties {
 
     private long delayMs = 30000;
 
+    @Min(0)
+    private long initialDelayMs = 5000;
+
     public int getMaxAttempts() {
         return maxAttempts;
     }
@@ -27,5 +30,13 @@ public class KnowledgeRetryProperties {
 
     public void setDelayMs(long delayMs) {
         this.delayMs = delayMs;
+    }
+
+    public long getInitialDelayMs() {
+        return initialDelayMs;
+    }
+
+    public void setInitialDelayMs(long initialDelayMs) {
+        this.initialDelayMs = initialDelayMs;
     }
 }
