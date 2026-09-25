@@ -2,12 +2,18 @@ package com.ttn.support.web;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ttn.support.domain.KnowledgeState;
 import com.ttn.support.domain.Ticket;
+import com.ttn.support.domain.TicketComment;
 import com.ttn.support.domain.TicketPriority;
 import com.ttn.support.domain.TicketStatus;
-import com.ttn.support.domain.KnowledgeState;
 import com.ttn.support.repository.TicketCommentRepository;
 import com.ttn.support.repository.TicketRepository;
 import com.ttn.support.service.TicketService;
@@ -16,17 +22,27 @@ import com.ttn.support.web.error.ConflictException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = "spring.profiles.active=test")
+@AutoConfigureMockMvc
 class TicketOptimisticLockIntegrationTest {
+
+    private static final String CONCURRENT_UPDATE_MESSAGE = "Ticket was updated concurrently";
 
     @Autowired
     private TicketService ticketService;
+
+    @Autowired
+    private MockMvc mockMvc;
 
     @MockBean
     private TicketRepository ticketRepository;
@@ -34,29 +50,86 @@ class TicketOptimisticLockIntegrationTest {
     @MockBean
     private TicketCommentRepository commentRepository;
 
-    @Test
-    void patchMapsOptimisticLockConflictTo409() {
-        Ticket ticket = sampleTicket("TKT-9001");
-        when(ticketRepository.findById("TKT-9001")).thenReturn(Optional.of(ticket));
-        when(ticketRepository.saveAndFlush(any()))
-                .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9001"));
-        when(commentRepository.findByTicketIdOrderByCreatedAtAscIdAsc("TKT-9001")).thenReturn(List.of());
+    @Nested
+    class ServiceLayer {
+        @Test
+        void patchMapsOptimisticLockConflictTo409() {
+            Ticket ticket = sampleTicket("TKT-9001");
+            when(ticketRepository.findById("TKT-9001")).thenReturn(Optional.of(ticket));
+            when(ticketRepository.saveAndFlush(any()))
+                    .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9001"));
+            when(commentRepository.findByTicketIdOrderByCreatedAtAscIdAsc("TKT-9001")).thenReturn(List.of());
 
-        UpdateTicketRequest request = new UpdateTicketRequest();
-        request.setTitlePresent(true);
-        request.setTitle("updated");
+            UpdateTicketRequest request = new UpdateTicketRequest();
+            request.setTitlePresent(true);
+            request.setTitle("updated");
 
-        assertThrows(ConflictException.class, () -> ticketService.update("TKT-9001", request));
+            assertThrows(ConflictException.class, () -> ticketService.update("TKT-9001", request));
+        }
+
+        @Test
+        void commentMapsOptimisticLockConflictTo409() {
+            Ticket ticket = sampleTicket("TKT-9002");
+            when(ticketRepository.findById("TKT-9002")).thenReturn(Optional.of(ticket));
+            when(ticketRepository.saveAndFlush(any()))
+                    .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9002"));
+
+            assertThrows(ConflictException.class, () -> ticketService.addComment("TKT-9002", "body"));
+        }
     }
 
-    @Test
-    void commentMapsOptimisticLockConflictTo409() {
-        Ticket ticket = sampleTicket("TKT-9002");
-        when(ticketRepository.findById("TKT-9002")).thenReturn(Optional.of(ticket));
-        when(ticketRepository.saveAndFlush(any()))
-                .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9002"));
+    @Nested
+    class HttpLayer {
+        @Test
+        void patchReturnsStandard409ConflictBody() throws Exception {
+            Ticket ticket = sampleTicket("TKT-9101");
+            when(ticketRepository.findById("TKT-9101")).thenReturn(Optional.of(ticket));
+            when(ticketRepository.saveAndFlush(any()))
+                    .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9101"));
+            when(commentRepository.findByTicketIdOrderByCreatedAtAscIdAsc("TKT-9101")).thenReturn(List.of());
 
-        assertThrows(ConflictException.class, () -> ticketService.addComment("TKT-9002", "body"));
+            mockMvc.perform(patch("/api/tickets/TKT-9101")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"title\":\"updated title\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error").value(CONCURRENT_UPDATE_MESSAGE))
+                    .andExpect(jsonPath("$.details").isArray())
+                    .andExpect(jsonPath("$.details").isEmpty());
+        }
+
+        @Test
+        void commentReturnsStandard409ConflictBody() throws Exception {
+            Ticket ticket = sampleTicket("TKT-9102");
+            when(ticketRepository.findById("TKT-9102")).thenReturn(Optional.of(ticket));
+            when(commentRepository.save(any(TicketComment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(ticketRepository.saveAndFlush(any()))
+                    .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9102"));
+
+            mockMvc.perform(post("/api/tickets/TKT-9102/comments")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\":\"concurrent comment\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error").value(CONCURRENT_UPDATE_MESSAGE))
+                    .andExpect(jsonPath("$.details").isArray())
+                    .andExpect(jsonPath("$.details").isEmpty());
+        }
+
+        @Test
+        void statusReturnsStandard409ConflictBodyOnOptimisticLock() throws Exception {
+            Ticket ticket = sampleTicket("TKT-9103");
+            when(ticketRepository.findById("TKT-9103")).thenReturn(Optional.of(ticket));
+            when(ticketRepository.saveAndFlush(any()))
+                    .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9103"));
+            when(commentRepository.findByTicketIdOrderByCreatedAtAscIdAsc(anyString())).thenReturn(List.of());
+
+            mockMvc.perform(post("/api/tickets/TKT-9103/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"IN_PROGRESS\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.error").value(CONCURRENT_UPDATE_MESSAGE))
+                    .andExpect(jsonPath("$.details").isArray())
+                    .andExpect(jsonPath("$.details").isEmpty());
+        }
     }
 
     private static Ticket sampleTicket(String id) {
