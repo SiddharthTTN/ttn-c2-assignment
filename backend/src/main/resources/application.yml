@@ -1,0 +1,30 @@
+spring:
+  profiles:
+    default: h2
+  application:
+    name: support-ticket-backend
+
+server:
+  port: ${PORT:8080}
+
+app:
+  rag:
+    top-k: 8
+    similarity-threshold: 0.75
+    embedding-dimensions: 768
+    ask-timeout: 7500ms
+  knowledge-retry:
+    max-attempts: 5
+    delay-ms: 30000
+    initial-delay-ms: 5000
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.ttn.support.transition: INFO
+    com.ttn.support.ask: INFO

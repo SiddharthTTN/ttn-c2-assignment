@@ -1,0 +1,37 @@
+# Local production-profile dependencies: PostgreSQL with pgvector + Ollama.
+# No real secrets — override via `.env` (see `.env.example`).
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: support-tickets-postgres
+    environment:
+      POSTGRES_DB: support_tickets
+      POSTGRES_USER: ${DATABASE_USERNAME:-support}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-change-me-local-db-password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - support_tickets_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-support} -d support_tickets"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: support-tickets-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - support_tickets_ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  support_tickets_pgdata:
+  support_tickets_ollama:

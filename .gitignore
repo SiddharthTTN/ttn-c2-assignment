@@ -1,0 +1,45 @@
+# Local environment (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Java / backend
+backend/target/
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/data/
+*.class
+*.jar
+*.war
+
+# Frontend static assets staged for production JAR packaging (generated)
+backend/src/main/resources/static/
+
+# Logs and temp
+*.log
+logs/
+tmp/
+temp/
+
+# Test / tooling caches
+.turbo/
+.cache/
+.specstory/.cache/
