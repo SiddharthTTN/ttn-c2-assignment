@@ -3,10 +3,11 @@ package com.ttn.support.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "ticket_knowledge")
@@ -28,7 +29,7 @@ public class TicketKnowledge {
     @Column(name = "chunk_index", nullable = false)
     private int chunkIndex;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(nullable = false)
     private String content;
 
@@ -50,7 +51,7 @@ public class TicketKnowledge {
     @Column(length = 80)
     private String category;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(name = "embedding_payload", nullable = false)
     private String embeddingPayload;
 

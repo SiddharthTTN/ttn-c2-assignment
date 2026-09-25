@@ -18,6 +18,8 @@
 
 Indexes: status, priority, updated_at; enable `pg_trgm` and add GIN trigram indexes on `lower(title)` and `lower(description)`. Keyword search escapes wildcard characters and performs case-insensitive literal substring matching against either field.
 
+JPA maps all schema `text` columns as long character strings rather than `@Lob`; on PostgreSQL this preserves Flyway `TEXT` columns instead of expecting large-object `oid` storage.
+
 ## `ticket_comment`
 
 - `id bigint generated always as identity` primary key
