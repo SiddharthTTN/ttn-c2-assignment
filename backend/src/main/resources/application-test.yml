@@ -22,6 +22,8 @@ spring:
 
 app:
   rag:
+    # Production default is 0.75 (application.yml). Deterministic test embeddings cannot reach it;
+    # see DeterministicEmbeddingThresholdContractTest.
     similarity-threshold: 0.35
   knowledge-retry:
     delay-ms: 3600000

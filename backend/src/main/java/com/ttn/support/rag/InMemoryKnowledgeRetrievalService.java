@@ -14,15 +14,33 @@ public class InMemoryKnowledgeRetrievalService implements KnowledgeRetrievalServ
 
     private final TicketKnowledgeRepository knowledgeRepository;
     private final EmbeddingCodec embeddingCodec;
+    private final ExactTicketChunkRetriever exactTicketChunkRetriever;
 
     public InMemoryKnowledgeRetrievalService(
-            TicketKnowledgeRepository knowledgeRepository, EmbeddingCodec embeddingCodec) {
+            TicketKnowledgeRepository knowledgeRepository,
+            EmbeddingCodec embeddingCodec,
+            ExactTicketChunkRetriever exactTicketChunkRetriever) {
         this.knowledgeRepository = knowledgeRepository;
         this.embeddingCodec = embeddingCodec;
+        this.exactTicketChunkRetriever = exactTicketChunkRetriever;
     }
 
     @Override
     public List<RetrievedChunk> retrieve(
+            float[] queryEmbedding, String queryText, int topK, double similarityThreshold) {
+        List<RetrievedChunk> exactMatches =
+                exactTicketChunkRetriever.retrieveForQuestion(queryEmbedding, queryText, topK);
+        List<RetrievedChunk> similarityMatches =
+                retrieveBySimilarity(queryEmbedding, queryText, topK, similarityThreshold);
+        return RetrievedChunkMerger.merge(exactMatches, similarityMatches, topK);
+    }
+
+    /**
+     * Test/H2 profile only. Production PostgreSQL retrieval applies the same similarity threshold directly
+     * against pgvector without a lexical prefilter; deterministic hash embeddings rarely reach 0.75 cosine
+     * similarity for broad questions, so the prefilter keeps integration tests aligned on threshold semantics.
+     */
+    private List<RetrievedChunk> retrieveBySimilarity(
             float[] queryEmbedding, String queryText, int topK, double similarityThreshold) {
         float[] query = EmbeddingCodec.normalize(queryEmbedding);
         List<Scored> scored = new ArrayList<>();
@@ -30,7 +48,7 @@ public class InMemoryKnowledgeRetrievalService implements KnowledgeRetrievalServ
             if (!sharesSignificantToken(queryText, chunk.getContent())) {
                 continue;
             }
-            float[] vector = EmbeddingCodec.normalize(embeddingCodec.decode(chunk.getEmbedding()));
+            float[] vector = EmbeddingCodec.normalize(embeddingCodec.decode(chunk.getEmbeddingPayload()));
             double similarity = EmbeddingCodec.cosineSimilarity(query, vector);
             if (similarity >= similarityThreshold) {
                 scored.add(new Scored(chunk.getTicketId(), chunk.getContent(), similarity, chunk.getTicketVersion()));

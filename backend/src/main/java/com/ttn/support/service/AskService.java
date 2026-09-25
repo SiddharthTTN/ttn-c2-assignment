@@ -81,8 +81,6 @@ public class AskService {
             return new AskResponse(generated.answer(), citations, false);
         } catch (ModelUnavailableException ex) {
             throw ex;
-        } catch (RuntimeException ex) {
-            throw new ModelUnavailableException("Model infrastructure is unavailable", ex);
         }
     }
 

@@ -15,6 +15,7 @@ CREATE TABLE ticket (
     resolution_notes CLOB,
     knowledge_state VARCHAR(16) NOT NULL DEFAULT 'PENDING',
     knowledge_version BIGINT NOT NULL DEFAULT 0,
+    knowledge_retry_count BIGINT NOT NULL DEFAULT 0,
     version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL

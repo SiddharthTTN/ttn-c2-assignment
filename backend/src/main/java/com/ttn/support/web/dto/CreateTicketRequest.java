@@ -12,6 +12,7 @@ public class CreateTicketRequest {
     private String title;
 
     @NotBlank
+    @Size(max = 20000)
     private String description;
 
     @NotNull
@@ -23,6 +24,7 @@ public class CreateTicketRequest {
     @Size(max = 80)
     private String category;
 
+    @Size(max = 20000)
     private String resolutionNotes;
 
     public String getTitle() {

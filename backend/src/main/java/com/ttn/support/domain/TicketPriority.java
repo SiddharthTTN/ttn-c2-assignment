@@ -5,8 +5,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 public enum TicketPriority {
     LOW,
     MEDIUM,
-    HIGH,
-    URGENT;
+    HIGH;
 
     @JsonCreator
     public static TicketPriority from(String value) {

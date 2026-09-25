@@ -5,6 +5,7 @@ import { EXAMPLE_QUESTIONS } from '../constants/askExamples'
 interface AskFormProps {
   question: string
   error?: string
+  maxLength?: number
   disabled?: boolean
   onQuestionChange: (value: string) => void
   onSubmit: () => void
@@ -13,6 +14,7 @@ interface AskFormProps {
 export function AskForm({
   question,
   error,
+  maxLength,
   disabled = false,
   onQuestionChange,
   onSubmit,
@@ -47,6 +49,7 @@ export function AskForm({
             id="ask-question"
             name="question"
             value={question}
+            maxLength={maxLength}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? 'ask-question-error' : undefined}
             disabled={disabled}

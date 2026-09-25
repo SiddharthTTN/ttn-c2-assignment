@@ -12,6 +12,7 @@
 - `resolution_notes text` nullable
 - `knowledge_state varchar(16)` not null default `PENDING`
 - `knowledge_version bigint` not null default 0
+- `knowledge_retry_count integer` not null default 0
 - `created_at timestamptz`, `updated_at timestamptz` not null
 
 Indexes: status, priority, updated_at; enable `pg_trgm` and add GIN trigram indexes on `lower(title)` and `lower(description)`. Keyword search escapes wildcard characters and performs case-insensitive literal substring matching against either field.

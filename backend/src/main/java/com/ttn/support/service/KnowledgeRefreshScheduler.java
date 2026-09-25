@@ -3,6 +3,7 @@ package com.ttn.support.service;
 import com.ttn.support.domain.KnowledgeState;
 import com.ttn.support.domain.Ticket;
 import com.ttn.support.repository.TicketRepository;
+import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,11 +26,12 @@ public class KnowledgeRefreshScheduler {
         this.knowledgeRefreshService = knowledgeRefreshService;
     }
 
-    @Scheduled(fixedDelayString = "${app.knowledge-retry.delay-ms:30000}")
+    @Scheduled(
+            initialDelayString = "${app.knowledge-retry.initial-delay-ms}",
+            fixedDelayString = "${app.knowledge-retry.delay-ms}")
     public void retryPending() {
-        List<Ticket> pending = ticketRepository.findAll().stream()
-                .filter(t -> t.getKnowledgeState() == KnowledgeState.PENDING)
-                .toList();
+        List<Ticket> pending =
+                ticketRepository.findPendingKnowledgeRefreshDue(KnowledgeState.PENDING, Instant.now());
         for (Ticket ticket : pending) {
             try {
                 knowledgeRefreshService.refreshTicket(ticket.getId());

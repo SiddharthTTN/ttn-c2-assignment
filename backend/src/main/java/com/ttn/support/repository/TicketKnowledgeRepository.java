@@ -22,4 +22,13 @@ public interface TicketKnowledgeRepository extends JpaRepository<TicketKnowledge
               AND k.ticketVersion = t.knowledgeVersion
             """)
     List<TicketKnowledge> findAllEligible();
+
+    @Query("""
+            SELECT k FROM TicketKnowledge k, Ticket t
+            WHERE k.ticketId = t.id
+              AND k.ticketId IN :ticketIds
+              AND t.knowledgeState = com.ttn.support.domain.KnowledgeState.READY
+              AND k.ticketVersion = t.knowledgeVersion
+            """)
+    List<TicketKnowledge> findEligibleByTicketIds(@Param("ticketIds") List<String> ticketIds);
 }

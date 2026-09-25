@@ -14,10 +14,26 @@ public class PgVectorKnowledgeRetrievalService implements KnowledgeRetrievalServ
     @PersistenceContext
     private EntityManager entityManager;
 
+    private final ExactTicketChunkRetriever exactTicketChunkRetriever;
+
+    public PgVectorKnowledgeRetrievalService(ExactTicketChunkRetriever exactTicketChunkRetriever) {
+        this.exactTicketChunkRetriever = exactTicketChunkRetriever;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public List<RetrievedChunk> retrieve(
             float[] queryEmbedding, String queryText, int topK, double similarityThreshold) {
+        List<RetrievedChunk> exactMatches =
+                exactTicketChunkRetriever.retrieveForQuestion(queryEmbedding, queryText, topK);
+        List<RetrievedChunk> similarityMatches =
+                retrieveBySimilarity(queryEmbedding, topK, similarityThreshold);
+        return RetrievedChunkMerger.merge(exactMatches, similarityMatches, topK);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<RetrievedChunk> retrieveBySimilarity(
+            float[] queryEmbedding, int topK, double similarityThreshold) {
         String vectorLiteral = EmbeddingCodec.toPgVectorLiteral(EmbeddingCodec.normalize(queryEmbedding));
         double maxDistance = 1.0 - similarityThreshold;
         List<Object[]> rows = entityManager

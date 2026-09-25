@@ -12,6 +12,10 @@ app:
     top-k: 8
     similarity-threshold: 0.75
     embedding-dimensions: 768
+  knowledge-retry:
+    max-attempts: 5
+    delay-ms: 30000
+    initial-delay-ms: 5000
 
 springdoc:
   api-docs:
