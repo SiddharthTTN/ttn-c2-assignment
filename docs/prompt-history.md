@@ -24,3 +24,8 @@
 **Ask:** Resolve the cached-detail, PostgreSQL migration/runtime, provider-boundary, refresh-lock, integration-test, specification, and UI polish findings.
 **Did:** Applied only the flagged fixes, added targeted route, HTTP conflict, transaction-boundary, dimension, migration, and PGVector integration coverage, and reran the complete local suites.
 **Artifacts:** `backend/`, `frontend/`, `Makefile`, `spec/api-contract.md`, `spec/integrations.md`, `spec/rag-ingestion.md`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
+
+## 2026-09-25T10:45:05Z — development — attempt 1
+**Ask:** Resolve the reviewer’s stale-refresh, retry timing, asynchronous dispatch, total ask deadline, production validation, optimistic-lock, dialog focus, and data-type findings.
+**Did:** Applied only the requested implementation and specification corrections, added focused concurrency, deadline, persistence, performance, startup, and UI regressions, and reran all locally available validation.
+**Artifacts:** `backend/`, `frontend/`, `.github/workflows/backend.yml`, `spec/data-model.md`, `spec/error-handling.md`, `spec/integrations.md`, `spec/rag-ingestion.md`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
