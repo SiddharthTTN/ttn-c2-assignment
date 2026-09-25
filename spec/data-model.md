@@ -14,7 +14,7 @@
 - `knowledge_version bigint` not null default 0
 - `created_at timestamptz`, `updated_at timestamptz` not null
 
-Indexes: status, priority, updated_at; a PostgreSQL full-text GIN expression over title and description.
+Indexes: status, priority, updated_at; enable `pg_trgm` and add GIN trigram indexes on `lower(title)` and `lower(description)`. Keyword search escapes wildcard characters and performs case-insensitive literal substring matching against either field.
 
 ## `ticket_comment`
 
@@ -33,9 +33,9 @@ Index: `(ticket_id, created_at, id)`.
 - `content text`, `content_hash char(64)` not null
 - `ticket_version bigint` not null
 - metadata columns: `status`, `priority`, `assignee`, `category`
-- `embedding vector(<configured model dimension>)` not null
+- `embedding vector(768)` not null for the default `nomic-embed-text` profile
 - `created_at timestamptz` not null
 
-Unique `(ticket_id, source_type, source_id, chunk_index)`; indexes on ticket id and an HNSW cosine index on embedding. Vector dimension is fixed by the selected deployment profile and migrations.
+Unique `(ticket_id, source_type, source_id, chunk_index)`; indexes on ticket id and an HNSW cosine index on embedding. Changing embedding dimensions requires a matching migration and complete re-index.
 
 Ticket ids are immutable. State changes use optimistic locking or a row lock so concurrent transitions cannot bypass the state machine.

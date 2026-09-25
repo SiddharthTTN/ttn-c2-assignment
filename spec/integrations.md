@@ -6,10 +6,10 @@ One durable PostgreSQL instance stores ticket records, comments, and vector chun
 
 ## Embedding provider
 
-Spring AI's `EmbeddingModel` abstraction selects Ollama by default for local development or a configured cloud provider. Model name, base URL, credentials, dimensions, and request timeout are runtime settings.
+Spring AI's `EmbeddingModel` abstraction uses Ollama `nomic-embed-text` with 768 dimensions by default or a configured cloud provider. Model name, base URL, credentials, and request timeout are runtime settings; a dimension change requires database migration and re-indexing.
 
 ## Chat provider
 
-Spring AI's `ChatModel` performs one constrained generation per qualifying ask. The prompt forbids outside knowledge and requests a structured answer with source ticket ids. No tools or agent loop are registered.
+Spring AI's `ChatModel` uses Ollama `llama3.2:3b` by default and performs one constrained generation per qualifying ask. The prompt forbids outside knowledge and requests a structured answer with source ticket ids. No tools or agent loop are registered.
 
 Failures are bounded by provider timeouts and exposed as 503 with a correlation id. Generation is not retried automatically; ingestion retries are safe because chunks are replaced by ticket/version.
