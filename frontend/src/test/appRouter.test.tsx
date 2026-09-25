@@ -277,6 +277,11 @@ describe('App router unsaved changes', () => {
     })
     expect(keepEditing).toHaveFocus()
 
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'A rerender while the dialog remains open' },
+    })
+    expect(keepEditing).toHaveFocus()
+
     await user.tab()
     expect(discardChanges).toHaveFocus()
 

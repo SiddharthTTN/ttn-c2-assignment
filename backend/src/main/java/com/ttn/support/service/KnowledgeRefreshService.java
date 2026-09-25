@@ -84,7 +84,7 @@ public class KnowledgeRefreshService {
         try {
             embeddings = embeddingService.embedAll(plan.texts());
         } catch (RuntimeException ex) {
-            knowledgeFailureRecorder.recordFailure(ticketId);
+            knowledgeFailureRecorder.recordFailure(ticketId, plan.knowledgeVersion());
             log.warn("Knowledge refresh failed ticketId={} reason={}", ticketId, ex.getMessage());
             throw ex;
         }
@@ -96,6 +96,7 @@ public class KnowledgeRefreshService {
                         "Skipped stale knowledge refresh ticketId={} expectedVersion={}",
                         ticketId,
                         plan.knowledgeVersion());
+                refreshNewerPendingVersion(ticketId, plan.knowledgeVersion());
                 return;
             }
             log.info(
@@ -103,7 +104,7 @@ public class KnowledgeRefreshService {
                     ticketId,
                     plan.knowledgeVersion());
         } catch (RuntimeException ex) {
-            scheduleFailureRecording(ticketId);
+            scheduleFailureRecording(ticketId, plan.knowledgeVersion());
             log.warn("Knowledge refresh failed ticketId={} reason={}", ticketId, ex.getMessage());
             throw ex;
         }
@@ -248,16 +249,23 @@ public class KnowledgeRefreshService {
         }
     }
 
-    private void scheduleFailureRecording(String ticketId) {
+    private void refreshNewerPendingVersion(String ticketId, long staleVersion) {
+        RefreshPlan newerPlan = transactionTemplate.execute(status -> loadRefreshPlan(ticketId));
+        if (newerPlan != null && newerPlan.knowledgeVersion() != staleVersion) {
+            refreshTicket(ticketId);
+        }
+    }
+
+    private void scheduleFailureRecording(String ticketId, long expectedKnowledgeVersion) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            knowledgeFailureRecorder.recordFailure(ticketId);
+            knowledgeFailureRecorder.recordFailure(ticketId, expectedKnowledgeVersion);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCompletion(int status) {
                 if (status == STATUS_ROLLED_BACK) {
-                    knowledgeFailureRecorder.recordFailure(ticketId);
+                    knowledgeFailureRecorder.recordFailure(ticketId, expectedKnowledgeVersion);
                 }
             }
         });

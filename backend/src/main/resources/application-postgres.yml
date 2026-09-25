@@ -23,6 +23,8 @@ spring:
           model: ${OLLAMA_EMBED_MODEL:nomic-embed-text}
 
 app:
+  rag:
+    ask-timeout: ${ASK_TIMEOUT:7500ms}
   ollama:
     http:
       connect-timeout: ${OLLAMA_HTTP_CONNECT_TIMEOUT:2s}

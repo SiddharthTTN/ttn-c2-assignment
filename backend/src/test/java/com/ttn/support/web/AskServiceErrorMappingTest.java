@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(properties = "spring.profiles.active=test")
+@SpringBootTest(properties = {"spring.profiles.active=test", "app.rag.ask-timeout=50ms"})
 @AutoConfigureMockMvc
 @Import(AskServiceErrorMappingTest.ErrorBeans.class)
 class AskServiceErrorMappingTest {
@@ -62,10 +62,21 @@ class AskServiceErrorMappingTest {
                 .andExpect(jsonPath("$.error").value("An unexpected error occurred"));
     }
 
+    @Test
+    void returns503WhenTotalAskDeadlineExpires() throws Exception {
+        errorMode.mode = ErrorMode.Mode.SLOW;
+        mockMvc.perform(post("/api/ai/ask")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"What caused payment to fail at checkout?\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("Model infrastructure is unavailable"));
+    }
+
     static class ErrorMode {
         enum Mode {
             MODEL_DOWN,
-            UNEXPECTED
+            UNEXPECTED,
+            SLOW
         }
 
         Mode mode = Mode.MODEL_DOWN;
@@ -87,6 +98,14 @@ class AskServiceErrorMappingTest {
                 public float[] embed(String text) {
                     if (errorMode.mode == ErrorMode.Mode.MODEL_DOWN) {
                         throw new ModelUnavailableException("down");
+                    }
+                    if (errorMode.mode == ErrorMode.Mode.SLOW) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException ex) {
+                            Thread.currentThread().interrupt();
+                            throw new ModelUnavailableException("interrupted", ex);
+                        }
                     }
                     throw new IllegalStateException("boom");
                 }

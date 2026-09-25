@@ -12,6 +12,7 @@ app:
     top-k: 8
     similarity-threshold: 0.75
     embedding-dimensions: 768
+    ask-timeout: 7500ms
   knowledge-retry:
     max-attempts: 5
     delay-ms: 30000

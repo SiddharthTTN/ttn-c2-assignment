@@ -12,7 +12,7 @@
 - `resolution_notes text` nullable
 - `knowledge_state varchar(16)` not null default `PENDING`
 - `knowledge_version bigint` not null default 0
-- `knowledge_retry_count integer` not null default 0
+- `knowledge_retry_count bigint` not null default 0
 - `knowledge_next_retry_at timestamptz` nullable; populated only while a failed refresh is waiting for its next capped-backoff attempt
 - `created_at timestamptz`, `updated_at timestamptz` not null
 

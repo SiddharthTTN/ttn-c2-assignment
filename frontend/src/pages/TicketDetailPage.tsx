@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -128,6 +128,11 @@ function TicketDetailContent({ ticket }: { ticket: Ticket }) {
 
   const isDirty = !valuesEqual(values, savedValues)
   const blocker = useBlocker(isDirty)
+  const keepEditing = useCallback(() => blocker.reset?.(), [blocker.reset])
+  const discardChanges = useCallback(
+    () => blocker.proceed?.(),
+    [blocker.proceed],
+  )
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -308,8 +313,8 @@ function TicketDetailContent({ ticket }: { ticket: Ticket }) {
       </div>
       <ConfirmNavigationDialog
         open={blocker.state === 'blocked'}
-        onStay={() => blocker.reset?.()}
-        onLeave={() => blocker.proceed?.()}
+        onStay={keepEditing}
+        onLeave={discardChanges}
       />
     </>
   )

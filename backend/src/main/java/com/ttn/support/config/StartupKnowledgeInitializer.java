@@ -4,6 +4,7 @@ import com.ttn.support.domain.KnowledgeState;
 import com.ttn.support.domain.Ticket;
 import com.ttn.support.repository.TicketRepository;
 import com.ttn.support.service.KnowledgeRefreshService;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -25,9 +26,8 @@ public class StartupKnowledgeInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        List<Ticket> pending = ticketRepository.findAll().stream()
-                .filter(t -> t.getKnowledgeState() == KnowledgeState.PENDING)
-                .toList();
+        List<Ticket> pending =
+                ticketRepository.findPendingKnowledgeRefreshDue(KnowledgeState.PENDING, Instant.now());
         for (Ticket ticket : pending) {
             try {
                 knowledgeRefreshService.refreshTicket(ticket.getId());

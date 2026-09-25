@@ -25,9 +25,13 @@ public class KnowledgeFailureRecorder {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordFailure(String ticketId) {
-        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+    public void recordFailure(String ticketId, long expectedKnowledgeVersion) {
+        Ticket ticket = ticketRepository.findByIdForKnowledgeRefresh(ticketId).orElse(null);
         if (ticket == null) {
+            return;
+        }
+        if (ticket.getKnowledgeState() != KnowledgeState.PENDING
+                || ticket.getKnowledgeVersion() != expectedKnowledgeVersion) {
             return;
         }
         long nextAttempt = ticket.getKnowledgeRetryCount() + 1;

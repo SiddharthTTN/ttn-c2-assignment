@@ -37,7 +37,7 @@ class KnowledgeRetryScheduleTest {
 
     @Test
     void schedulesNextRetryUsingBackoff() {
-        failureRecorder.recordFailure("TKT-1001");
+        failureRecorder.recordFailure("TKT-1001", currentKnowledgeVersion());
         Ticket ticket = ticketRepository.findById("TKT-1001").orElseThrow();
         assertEquals(1, ticket.getKnowledgeRetryCount());
         assertEquals(KnowledgeState.PENDING, ticket.getKnowledgeState());
@@ -49,7 +49,7 @@ class KnowledgeRetryScheduleTest {
 
     @Test
     void dueQueryExcludesFutureRetries() {
-        failureRecorder.recordFailure("TKT-1001");
+        failureRecorder.recordFailure("TKT-1001", currentKnowledgeVersion());
         Ticket ticket = ticketRepository.findById("TKT-1001").orElseThrow();
         assertTrue(ticketRepository
                 .findPendingKnowledgeRefreshDue(KnowledgeState.PENDING, Instant.now())
@@ -60,5 +60,24 @@ class KnowledgeRetryScheduleTest {
                         KnowledgeState.PENDING, ticket.getKnowledgeNextRetryAt().plusSeconds(1))
                 .stream()
                 .anyMatch(t -> "TKT-1001".equals(t.getId())));
+    }
+
+    @Test
+    void staleFailureCannotDowngradeNewerReadyKnowledge() {
+        long staleVersion = currentKnowledgeVersion();
+        Ticket ticket = ticketRepository.findById("TKT-1001").orElseThrow();
+        ticket.setKnowledgeVersion(staleVersion + 1);
+        ticket.setKnowledgeState(KnowledgeState.READY);
+        ticketRepository.saveAndFlush(ticket);
+
+        failureRecorder.recordFailure("TKT-1001", staleVersion);
+
+        Ticket unchanged = ticketRepository.findById("TKT-1001").orElseThrow();
+        assertEquals(KnowledgeState.READY, unchanged.getKnowledgeState());
+        assertEquals(0, unchanged.getKnowledgeRetryCount());
+    }
+
+    private long currentKnowledgeVersion() {
+        return ticketRepository.findById("TKT-1001").orElseThrow().getKnowledgeVersion();
     }
 }
