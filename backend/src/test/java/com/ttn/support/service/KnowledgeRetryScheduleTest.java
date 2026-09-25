@@ -53,12 +53,12 @@ class KnowledgeRetryScheduleTest {
         Ticket ticket = ticketRepository.findById("TKT-1001").orElseThrow();
         assertTrue(ticketRepository
                 .findPendingKnowledgeRefreshDue(KnowledgeState.PENDING, Instant.now())
-                .isEmpty());
-        assertEquals(
-                1,
-                ticketRepository
-                        .findPendingKnowledgeRefreshDue(
-                                KnowledgeState.PENDING, ticket.getKnowledgeNextRetryAt().plusSeconds(1))
-                        .size());
+                .stream()
+                .noneMatch(t -> "TKT-1001".equals(t.getId())));
+        assertTrue(ticketRepository
+                .findPendingKnowledgeRefreshDue(
+                        KnowledgeState.PENDING, ticket.getKnowledgeNextRetryAt().plusSeconds(1))
+                .stream()
+                .anyMatch(t -> "TKT-1001".equals(t.getId())));
     }
 }

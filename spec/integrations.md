@@ -6,7 +6,7 @@ One durable PostgreSQL instance stores ticket records, comments, and vector chun
 
 ## Embedding provider
 
-Spring AI's `EmbeddingModel` abstraction uses Ollama `nomic-embed-text` with 768 dimensions by default or a configured cloud provider. Model name, base URL, credentials, and request timeout are runtime settings; a dimension change requires database migration and re-indexing.
+Spring AI's `EmbeddingModel` abstraction uses Ollama `nomic-embed-text` with 768 dimensions by default or a configured cloud provider. Model name, base URL, credentials, and bounded HTTP connect/read timeouts (`app.ollama.http.*`, overridable via `OLLAMA_HTTP_*`) are runtime settings; read timeout must stay within the 7.5 second budget. Embedding responses must match `app.rag.embedding-dimensions`; mismatches are server errors, not model-outage 503s. A dimension change requires database migration and re-indexing.
 
 ## Chat provider
 

@@ -10,7 +10,7 @@ import com.ttn.support.config.KnowledgeRetryProperties;
 import com.ttn.support.rag.RagProperties;
 
 @Configuration
-@EnableConfigurationProperties({RagProperties.class, KnowledgeRetryProperties.class})
+@EnableConfigurationProperties({RagProperties.class, KnowledgeRetryProperties.class, OllamaHttpClientProperties.class})
 public class WebConfig implements WebMvcConfigurer {
 
     @Value("${server.port:8080}")

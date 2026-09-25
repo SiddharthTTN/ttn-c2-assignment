@@ -60,6 +60,7 @@ run-h2:
 	cd "$(BACKEND)" && ./mvnw -q spring-boot:run -Dspring-boot.run.profiles=h2
 
 run-postgres:
+	@set -a && [ -f "$(ROOT)/.env" ] && . "$(ROOT)/.env"; set +a; \
 	cd "$(BACKEND)" && ./mvnw -q spring-boot:run -Dspring-boot.run.profiles=postgres
 
 docker-up:

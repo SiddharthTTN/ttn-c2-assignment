@@ -3,6 +3,7 @@ import { render, type RenderOptions } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import type { ReactElement, ReactNode } from 'react'
 import { createAppMemoryRouter } from '../router'
+import type { Ticket } from '../api/types'
 
 interface AppRouterOptions {
   initialEntries?: string[]
@@ -102,8 +103,42 @@ export const sampleTicket = {
   }>,
 }
 
-export function createTicketApiMock(initialTicket = sampleTicket) {
-  let ticketState = structuredClone(initialTicket)
+export const secondSampleTicket = {
+  id: 'TKT-1002',
+  title: 'Login page spinner',
+  description: 'Users see an infinite spinner after SSO.',
+  status: 'IN_PROGRESS' as const,
+  priority: 'MEDIUM' as const,
+  assignee: 'Ravi',
+  category: 'Identity',
+  resolutionNotes: null,
+  createdAt: '2026-09-23T14:00:00Z',
+  updatedAt: '2026-09-25T06:00:00Z',
+  comments: [],
+}
+
+function nextAvailableTicketId(ticketStates: Map<string, Ticket>) {
+  let sequence = 1002
+  while (ticketStates.has(`TKT-${sequence}`)) {
+    sequence += 1
+  }
+  return `TKT-${sequence}`
+}
+
+export function createTicketApiMock(
+  initialTicketOrTickets: Ticket | Ticket[] = sampleTicket,
+) {
+  const initialTickets = Array.isArray(initialTicketOrTickets)
+    ? initialTicketOrTickets
+    : [initialTicketOrTickets]
+  const ticketStates = new Map(
+    initialTickets.map((ticket) => [ticket.id, structuredClone(ticket)]),
+  )
+
+  const getTicketIdFromPath = (path: string) => {
+    const match = path.match(/\/api\/tickets\/(TKT-\d+)$/)
+    return match?.[1]
+  }
 
   return (input: RequestInfo | URL, init?: RequestInit) => {
     const url =
@@ -116,43 +151,79 @@ export function createTicketApiMock(initialTicket = sampleTicket) {
     const path = url.replace(/^https?:\/\/[^/]+/, '')
 
     if (method === 'GET' && /\/api\/tickets\/TKT-\d+$/.test(path)) {
-      return Promise.resolve(mockJsonResponse(ticketState))
+      const ticketId = getTicketIdFromPath(path)
+      const ticket = ticketId ? ticketStates.get(ticketId) : undefined
+      if (!ticket) {
+        return Promise.resolve(
+          mockJsonResponse({ error: 'Not found' }, { status: 404 }),
+        )
+      }
+      return Promise.resolve(mockJsonResponse(ticket))
     }
     if (method === 'GET' && path.startsWith('/api/tickets')) {
-      return Promise.resolve(mockJsonResponse({ items: [ticketState] }))
+      return Promise.resolve(
+        mockJsonResponse({ items: Array.from(ticketStates.values()) }),
+      )
     }
     if (method === 'POST' && path === '/api/tickets') {
       const body = init?.body ? JSON.parse(String(init.body)) : {}
-      ticketState = {
+      const newId = nextAvailableTicketId(ticketStates)
+      const created = {
         ...sampleTicket,
-        id: 'TKT-1002',
+        id: newId,
         ...body,
-        status: 'OPEN',
+        status: 'OPEN' as const,
         comments: [],
         createdAt: '2026-09-25T08:00:00Z',
         updatedAt: '2026-09-25T08:00:00Z',
       }
-      return Promise.resolve(mockJsonResponse(ticketState, { status: 201 }))
+      ticketStates.set(newId, created)
+      return Promise.resolve(mockJsonResponse(created, { status: 201 }))
     }
     if (method === 'PATCH' && /\/api\/tickets\/TKT-\d+$/.test(path)) {
+      const ticketId = getTicketIdFromPath(path)
+      const ticketState = ticketId ? ticketStates.get(ticketId) : undefined
+      if (!ticketState) {
+        return Promise.resolve(
+          mockJsonResponse({ error: 'Not found' }, { status: 404 }),
+        )
+      }
       const body = init?.body ? JSON.parse(String(init.body)) : {}
-      ticketState = {
+      const updated = {
         ...ticketState,
         ...body,
         updatedAt: '2026-09-25T08:10:00Z',
       }
-      return Promise.resolve(mockJsonResponse(ticketState))
+      ticketStates.set(ticketId!, updated)
+      return Promise.resolve(mockJsonResponse(updated))
     }
     if (method === 'POST' && path.endsWith('/status')) {
+      const ticketId = path.match(/\/api\/tickets\/(TKT-\d+)\/status$/)?.[1]
+      const ticketState = ticketId ? ticketStates.get(ticketId) : undefined
+      if (!ticketState) {
+        return Promise.resolve(
+          mockJsonResponse({ error: 'Not found' }, { status: 404 }),
+        )
+      }
       const body = init?.body ? JSON.parse(String(init.body)) : {}
-      ticketState = {
+      const updated = {
         ...ticketState,
         status: body.status,
         updatedAt: '2026-09-25T08:11:00Z',
       }
-      return Promise.resolve(mockJsonResponse(ticketState))
+      ticketStates.set(ticketId!, updated)
+      return Promise.resolve(mockJsonResponse(updated))
     }
     if (method === 'POST' && path.endsWith('/comments')) {
+      const ticketId = path.match(
+        /\/api\/tickets\/(TKT-\d+)\/comments$/,
+      )?.[1]
+      const ticketState = ticketId ? ticketStates.get(ticketId) : undefined
+      if (!ticketState) {
+        return Promise.resolve(
+          mockJsonResponse({ error: 'Not found' }, { status: 404 }),
+        )
+      }
       const body = init?.body ? JSON.parse(String(init.body)) : {}
       const comment = {
         id: 42,
@@ -160,11 +231,12 @@ export function createTicketApiMock(initialTicket = sampleTicket) {
         body: body.body,
         createdAt: '2026-09-25T08:12:00Z',
       }
-      ticketState = {
+      const updated = {
         ...ticketState,
         comments: [...ticketState.comments, comment],
         updatedAt: '2026-09-25T08:12:00Z',
       }
+      ticketStates.set(ticketId!, updated)
       return Promise.resolve(mockJsonResponse(comment, { status: 201 }))
     }
     if (method === 'POST' && path === '/api/ai/ask') {

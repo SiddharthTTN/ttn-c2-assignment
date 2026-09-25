@@ -24,6 +24,8 @@ import {
 } from '../components/TicketForm'
 import { mapDetailsToFields } from '../utils/helpers'
 
+export const COMMENT_BODY_MAX_LENGTH = 10000
+
 function toFormValues(ticket: {
   title: string
   description: string
@@ -76,7 +78,7 @@ export function TicketDetailPage() {
     return (
       <>
         <PageHeader title="Ticket details" />
-        <LoadingSkeleton rows={3} />
+        <LoadingSkeleton rows={3} statusText="Loading ticket…" />
       </>
     )
   }
@@ -103,7 +105,9 @@ export function TicketDetailPage() {
     )
   }
 
-  return <TicketDetailContent ticket={ticketQuery.data!} />
+  return (
+    <TicketDetailContent key={ticketQuery.data!.id} ticket={ticketQuery.data!} />
+  )
 }
 
 function TicketDetailContent({ ticket }: { ticket: Ticket }) {
@@ -208,8 +212,15 @@ function TicketDetailContent({ ticket }: { ticket: Ticket }) {
   }
 
   const handleCommentSubmit = () => {
-    if (!commentValue.trim()) {
+    const trimmed = commentValue.trim()
+    if (!trimmed) {
       setCommentError('Comment is required.')
+      return
+    }
+    if (trimmed.length > COMMENT_BODY_MAX_LENGTH) {
+      setCommentError(
+        `Comment must be at most ${COMMENT_BODY_MAX_LENGTH} characters.`,
+      )
       return
     }
     commentMutation.mutate()
@@ -270,6 +281,7 @@ function TicketDetailContent({ ticket }: { ticket: Ticket }) {
             <CommentForm
               value={commentValue}
               error={commentError}
+              maxLength={COMMENT_BODY_MAX_LENGTH}
               disabled={commentMutation.isPending}
               onChange={(value) => {
                 setCommentValue(value)

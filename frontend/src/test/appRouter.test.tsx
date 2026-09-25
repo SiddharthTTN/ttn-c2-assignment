@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   createTicketApiMock,
   mockJsonResponse,
   renderWithAppRouter,
   sampleTicket,
+  secondSampleTicket,
 } from '../test/test-utils'
+import { COMMENT_BODY_MAX_LENGTH } from '../pages/TicketDetailPage'
 
 describe('App router flows', () => {
   beforeEach(() => {
@@ -100,6 +102,50 @@ describe('App router flows', () => {
     expect(screen.getByText('TKT-1002')).toBeInTheDocument()
   })
 
+  it('resets detail form state when navigating between cached ticket routes', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(
+        createTicketApiMock([sampleTicket, secondSampleTicket]),
+      )
+    vi.spyOn(globalThis, 'fetch').mockImplementation(fetchMock)
+
+    const user = userEvent.setup()
+    const { router } = renderWithAppRouter({
+      initialEntries: ['/tickets/TKT-1002', '/tickets/TKT-1001'],
+      initialIndex: 1,
+    })
+
+    await screen.findByRole('heading', { name: sampleTicket.title })
+    await router.navigate('/tickets/TKT-1002')
+
+    expect(
+      await screen.findByRole('heading', { name: secondSampleTicket.title }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).toHaveValue(secondSampleTicket.title)
+    expect(screen.getByLabelText('Description')).toHaveValue(
+      secondSampleTicket.description,
+    )
+
+    await user.clear(screen.getByLabelText('Title'))
+    await user.type(screen.getByLabelText('Title'), 'Spinner fix deployed')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/tickets/TKT-1002'),
+        expect.objectContaining({ method: 'PATCH' }),
+      )
+    })
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          String(url).includes('/api/tickets/TKT-1001') &&
+          init?.method === 'PATCH',
+      ),
+    ).toBe(false)
+  })
+
   it('navigates from ask citations to ticket detail', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(createTicketApiMock())
 
@@ -141,9 +187,132 @@ describe('App router loading state', () => {
 
     renderWithAppRouter({ initialEntries: ['/tickets/TKT-1001'] })
 
-    expect(screen.getByText('Loading tickets…')).toBeInTheDocument()
+    expect(screen.getByText('Loading ticket…')).toBeInTheDocument()
     expect(
       await screen.findByRole('heading', { name: sampleTicket.title }),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('App router unsaved changes', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('blocks navigation and keeps editing when the user stays', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(createTicketApiMock())
+
+    const user = userEvent.setup()
+    renderWithAppRouter({ initialEntries: ['/tickets/TKT-1001'] })
+
+    const titleInput = await screen.findByLabelText('Title')
+    await user.type(titleInput, ' extra')
+    await user.click(screen.getByRole('link', { name: 'Back to list' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Keep editing' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('heading', { name: sampleTicket.title })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to list' })).toHaveFocus()
+    expect(titleInput).toHaveValue(`${sampleTicket.title} extra`)
+  })
+
+  it('discards edits and proceeds when the user confirms leaving', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(createTicketApiMock())
+
+    const user = userEvent.setup()
+    renderWithAppRouter({ initialEntries: ['/tickets/TKT-1001'] })
+
+    const titleInput = await screen.findByLabelText('Title')
+    await user.type(titleInput, ' unsaved')
+    await user.click(screen.getByRole('link', { name: 'Back to list' }))
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Discard changes' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Tickets' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('closes the blocker dialog on Escape and restores focus', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(createTicketApiMock())
+
+    const user = userEvent.setup()
+    renderWithAppRouter({ initialEntries: ['/tickets/TKT-1001'] })
+
+    await user.type(await screen.findByLabelText('Title'), ' draft')
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+    await user.click(cancelButton)
+
+    await screen.findByRole('dialog')
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    expect(cancelButton).toHaveFocus()
+  })
+
+  it('traps focus within the unsaved changes dialog', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(createTicketApiMock())
+
+    const user = userEvent.setup()
+    renderWithAppRouter({ initialEntries: ['/tickets/TKT-1001'] })
+
+    await user.type(await screen.findByLabelText('Title'), ' edit')
+    await user.click(screen.getByRole('link', { name: 'Back to list' }))
+
+    const keepEditing = await screen.findByRole('button', {
+      name: 'Keep editing',
+    })
+    const discardChanges = screen.getByRole('button', {
+      name: 'Discard changes',
+    })
+    expect(keepEditing).toHaveFocus()
+
+    await user.tab()
+    expect(discardChanges).toHaveFocus()
+
+    await user.tab()
+    expect(keepEditing).toHaveFocus()
+
+    await user.tab({ shift: true })
+    expect(discardChanges).toHaveFocus()
+  })
+})
+
+describe('App router comment validation', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('enforces the comment body max length in the UI', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(createTicketApiMock())
+
+    const user = userEvent.setup()
+    renderWithAppRouter({ initialEntries: ['/tickets/TKT-1001'] })
+
+    const commentField = await screen.findByLabelText('Add comment')
+    expect(commentField).toHaveAttribute(
+      'maxLength',
+      String(COMMENT_BODY_MAX_LENGTH),
+    )
+
+    const tooLong = `${'a'.repeat(COMMENT_BODY_MAX_LENGTH)}b`
+    fireEvent.change(commentField, { target: { value: tooLong } })
+    await user.click(screen.getByRole('button', { name: 'Post comment' }))
+
+    expect(
+      await screen.findByText(
+        `Comment must be at most ${COMMENT_BODY_MAX_LENGTH} characters.`,
+      ),
     ).toBeInTheDocument()
   })
 })

@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("!test")
+@Profile("!test & !pgvector-it")
 public class KnowledgeRefreshScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(KnowledgeRefreshScheduler.class);

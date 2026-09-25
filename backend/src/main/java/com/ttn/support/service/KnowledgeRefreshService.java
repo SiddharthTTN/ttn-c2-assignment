@@ -22,10 +22,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class KnowledgeRefreshService {
@@ -42,6 +43,7 @@ public class KnowledgeRefreshService {
     private final Environment environment;
     private final KnowledgeFailureRecorder knowledgeFailureRecorder;
     private final KnowledgeChunkFormatter knowledgeChunkFormatter;
+    private final TransactionTemplate transactionTemplate;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -56,7 +58,8 @@ public class KnowledgeRefreshService {
             EmbeddingCodec embeddingCodec,
             Environment environment,
             KnowledgeFailureRecorder knowledgeFailureRecorder,
-            KnowledgeChunkFormatter knowledgeChunkFormatter) {
+            KnowledgeChunkFormatter knowledgeChunkFormatter,
+            PlatformTransactionManager transactionManager) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.knowledgeRepository = knowledgeRepository;
@@ -67,65 +70,110 @@ public class KnowledgeRefreshService {
         this.environment = environment;
         this.knowledgeFailureRecorder = knowledgeFailureRecorder;
         this.knowledgeChunkFormatter = knowledgeChunkFormatter;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void refreshTicket(String ticketId) {
-        Ticket ticket = ticketRepository.findByIdForKnowledgeRefresh(ticketId).orElse(null);
-        if (ticket == null) {
+        RefreshPlan plan = transactionTemplate.execute(status -> loadRefreshPlan(ticketId));
+        if (plan == null) {
             return;
+        }
+
+        List<float[]> embeddings;
+        try {
+            embeddings = embeddingService.embedAll(plan.texts());
+        } catch (RuntimeException ex) {
+            knowledgeFailureRecorder.recordFailure(ticketId);
+            log.warn("Knowledge refresh failed ticketId={} reason={}", ticketId, ex.getMessage());
+            throw ex;
+        }
+
+        try {
+            Boolean applied = transactionTemplate.execute(status -> applyRefreshPlan(plan, embeddings));
+            if (!Boolean.TRUE.equals(applied)) {
+                log.debug(
+                        "Skipped stale knowledge refresh ticketId={} expectedVersion={}",
+                        ticketId,
+                        plan.knowledgeVersion());
+                return;
+            }
+            log.info(
+                    "Knowledge refresh succeeded ticketId={} version={}",
+                    ticketId,
+                    plan.knowledgeVersion());
+        } catch (RuntimeException ex) {
+            scheduleFailureRecording(ticketId);
+            log.warn("Knowledge refresh failed ticketId={} reason={}", ticketId, ex.getMessage());
+            throw ex;
+        }
+    }
+
+    private RefreshPlan loadRefreshPlan(String ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+        if (ticket == null) {
+            return null;
         }
         if (ticket.getKnowledgeState() != KnowledgeState.PENDING) {
             log.debug(
                     "Skipping knowledge refresh ticketId={} state={}",
                     ticketId,
                     ticket.getKnowledgeState());
-            return;
+            return null;
         }
-        try {
-            List<ChunkDraft> drafts = buildChunks(ticket);
-            List<String> texts = drafts.stream().map(ChunkDraft::content).toList();
-            List<float[]> embeddings = embeddingService.embedAll(texts);
+        List<ChunkDraft> drafts = buildChunks(ticket);
+        List<String> texts = drafts.stream().map(ChunkDraft::content).toList();
+        return new RefreshPlan(ticket, drafts, texts);
+    }
 
-            knowledgeRepository.deleteByTicketId(ticketId);
-            knowledgeRepository.flush();
+    private boolean applyRefreshPlan(RefreshPlan plan, List<float[]> embeddings) {
+        Ticket ticket =
+                ticketRepository.findByIdForKnowledgeRefresh(plan.ticket().getId()).orElse(null);
+        if (ticket == null) {
+            return false;
+        }
+        if (ticket.getKnowledgeState() != KnowledgeState.PENDING) {
+            return false;
+        }
+        if (ticket.getKnowledgeVersion() != plan.knowledgeVersion()) {
+            return false;
+        }
 
-            Instant now = Instant.now();
-            for (int i = 0; i < drafts.size(); i++) {
-                ChunkDraft draft = drafts.get(i);
-                TicketKnowledge knowledge = TicketKnowledge.createNew();
-                knowledge.setTicketId(ticket.getId());
-                knowledge.setSourceType(draft.sourceType().name());
-                knowledge.setSourceId(draft.sourceId());
-                knowledge.setChunkIndex(draft.chunkIndex());
-                knowledge.setContent(draft.content());
-                knowledge.setContentHash(contentHasher.sha256(draft.content()));
-                knowledge.setTicketVersion(ticket.getKnowledgeVersion());
-                knowledge.setStatus(ticket.getStatus().name());
-                knowledge.setPriority(ticket.getPriority().name());
-                knowledge.setAssignee(ticket.getAssignee());
-                knowledge.setCategory(ticket.getCategory());
-                knowledge.setCreatedAt(now);
-                String payload = embeddingCodec.encode(embeddings.get(i));
-                if (isPostgresProfile()) {
-                    insertPgVectorRow(knowledge, payload, embeddings.get(i));
-                } else {
-                    knowledge.setEmbeddingPayload(payload);
-                    knowledgeRepository.save(knowledge);
-                }
+        String ticketId = ticket.getId();
+        knowledgeRepository.deleteByTicketId(ticketId);
+        knowledgeRepository.flush();
+
+        Instant now = Instant.now();
+        for (int i = 0; i < plan.drafts().size(); i++) {
+            ChunkDraft draft = plan.drafts().get(i);
+            TicketKnowledge knowledge = TicketKnowledge.createNew();
+            knowledge.setTicketId(ticket.getId());
+            knowledge.setSourceType(draft.sourceType().name());
+            knowledge.setSourceId(draft.sourceId());
+            knowledge.setChunkIndex(draft.chunkIndex());
+            knowledge.setContent(draft.content());
+            knowledge.setContentHash(contentHasher.sha256(draft.content()));
+            knowledge.setTicketVersion(ticket.getKnowledgeVersion());
+            knowledge.setStatus(ticket.getStatus().name());
+            knowledge.setPriority(ticket.getPriority().name());
+            knowledge.setAssignee(ticket.getAssignee());
+            knowledge.setCategory(ticket.getCategory());
+            knowledge.setCreatedAt(now);
+            String payload = embeddingCodec.encode(embeddings.get(i));
+            if (isPostgresProfile()) {
+                insertPgVectorRow(knowledge, payload, embeddings.get(i));
+            } else {
+                knowledge.setEmbeddingPayload(payload);
+                knowledgeRepository.save(knowledge);
             }
-
-            ticket.setKnowledgeState(KnowledgeState.READY);
-            ticket.setKnowledgeRetryCount(0);
-            ticket.setKnowledgeNextRetryAt(null);
-            ticket.setUpdatedAt(Instant.now());
-            ticketRepository.save(ticket);
-            log.info("Knowledge refresh succeeded ticketId={} version={}", ticketId, ticket.getKnowledgeVersion());
-        } catch (Exception ex) {
-            scheduleFailureRecording(ticketId);
-            log.warn("Knowledge refresh failed ticketId={} reason={}", ticketId, ex.getMessage());
-            throw ex;
         }
+
+        ticket.setKnowledgeState(KnowledgeState.READY);
+        ticket.setKnowledgeRetryCount(0);
+        ticket.setKnowledgeNextRetryAt(null);
+        ticket.setUpdatedAt(Instant.now());
+        ticketRepository.save(ticket);
+        return true;
     }
 
     private void insertPgVectorRow(TicketKnowledge knowledge, String embeddingPayload, float[] embedding) {
@@ -222,6 +270,12 @@ public class KnowledgeRefreshService {
             }
         }
         return false;
+    }
+
+    private record RefreshPlan(Ticket ticket, List<ChunkDraft> drafts, List<String> texts) {
+        long knowledgeVersion() {
+            return ticket.getKnowledgeVersion();
+        }
     }
 
     private record ChunkDraft(

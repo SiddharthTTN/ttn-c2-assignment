@@ -4,6 +4,7 @@ import { FieldError } from './FieldError'
 interface CommentFormProps {
   value: string
   error?: string
+  maxLength?: number
   disabled?: boolean
   onChange: (value: string) => void
   onSubmit: () => void
@@ -12,6 +13,7 @@ interface CommentFormProps {
 export function CommentForm({
   value,
   error,
+  maxLength,
   disabled = false,
   onChange,
   onSubmit,
@@ -32,6 +34,7 @@ export function CommentForm({
           aria-invalid={Boolean(error)}
           aria-describedby={error ? 'comment-body-error' : undefined}
           disabled={disabled}
+          maxLength={maxLength}
           onChange={(event) => onChange(event.target.value)}
         />
         <FieldError id="comment-body-error" message={error} />

@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("!test")
+@Profile("!test & !pgvector-it")
 public class StartupKnowledgeInitializer implements ApplicationRunner {
 
     private final TicketRepository ticketRepository;

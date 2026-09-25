@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Service
-@Profile({"h2", "test"})
+@Profile({"h2", "test", "pgvector-it"})
 public class DeterministicTicketAnswerGenerator implements TicketAnswerGenerator {
 
     private final ObjectMapper objectMapper;
