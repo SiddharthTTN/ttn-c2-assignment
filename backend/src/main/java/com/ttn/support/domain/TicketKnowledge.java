@@ -51,8 +51,8 @@ public class TicketKnowledge {
     private String category;
 
     @Lob
-    @Column(nullable = false)
-    private String embedding;
+    @Column(name = "embedding_payload", nullable = false)
+    private String embeddingPayload;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -160,12 +160,12 @@ public class TicketKnowledge {
         this.category = category;
     }
 
-    public String getEmbedding() {
-        return embedding;
+    public String getEmbeddingPayload() {
+        return embeddingPayload;
     }
 
-    public void setEmbedding(String embedding) {
-        this.embedding = embedding;
+    public void setEmbeddingPayload(String embeddingPayload) {
+        this.embeddingPayload = embeddingPayload;
     }
 
     public Instant getCreatedAt() {

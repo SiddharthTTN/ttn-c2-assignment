@@ -18,15 +18,23 @@ public class SpringAiTicketEmbeddingService implements TicketEmbeddingService {
 
     @Override
     public float[] embed(String text) {
-        return embeddingModel.embed(text);
+        try {
+            return embeddingModel.embed(text);
+        } catch (RuntimeException ex) {
+            throw ModelInfrastructureExceptionMapper.toModelUnavailable("embedding", ex);
+        }
     }
 
     @Override
     public List<float[]> embedAll(List<String> texts) {
-        List<float[]> vectors = new ArrayList<>();
-        for (float[] vector : embeddingModel.embed(texts)) {
-            vectors.add(vector);
+        try {
+            List<float[]> vectors = new ArrayList<>();
+            for (float[] vector : embeddingModel.embed(texts)) {
+                vectors.add(vector);
+            }
+            return vectors;
+        } catch (RuntimeException ex) {
+            throw ModelInfrastructureExceptionMapper.toModelUnavailable("embedding", ex);
         }
-        return vectors;
     }
 }

@@ -14,7 +14,7 @@ describe('CreateTicketPage', () => {
     const user = userEvent.setup()
 
     renderWithProviders(<CreateTicketPage />, {
-      routerProps: { initialEntries: ['/tickets/new'] },
+      initialEntries: ['/tickets/new'],
     })
 
     await user.click(screen.getByRole('button', { name: 'Save ticket' }))
@@ -37,7 +37,7 @@ describe('CreateTicketPage', () => {
 
     const user = userEvent.setup()
     renderWithProviders(<CreateTicketPage />, {
-      routerProps: { initialEntries: ['/tickets/new'] },
+      initialEntries: ['/tickets/new'],
     })
 
     await user.type(screen.getByLabelText('Title'), 'Test ticket')

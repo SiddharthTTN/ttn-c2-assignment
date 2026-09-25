@@ -58,6 +58,26 @@ class TicketContractTest {
     }
 
     @Test
+    void rejectsCommentBodyLongerThan10000Characters() throws Exception {
+        String ticketId = createTicket("Comment limit ticket", "desc", "LOW", null, null);
+        String body = "c".repeat(10001);
+        mockMvc.perform(post("/api/tickets/" + ticketId + "/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"body\":\"" + body + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void acceptsCommentUpTo10000Characters() throws Exception {
+        String ticketId = createTicket("Comment max ticket", "desc", "LOW", null, null);
+        String body = "c".repeat(10000);
+        mockMvc.perform(post("/api/tickets/" + ticketId + "/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"body\":\"" + body + "\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     void patchClearsNullableFieldsAndRejectsEmptyBody() throws Exception {
         String ticketId = createTicket("Patch ticket", "desc", "MEDIUM", "dana", "payments");
         mockMvc.perform(patch("/api/tickets/" + ticketId)

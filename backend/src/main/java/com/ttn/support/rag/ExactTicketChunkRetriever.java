@@ -27,7 +27,7 @@ public class ExactTicketChunkRetriever {
         float[] query = EmbeddingCodec.normalize(queryEmbedding);
         List<ScoredChunk> scored = new ArrayList<>();
         for (TicketKnowledge chunk : knowledgeRepository.findEligibleByTicketIds(ticketIds)) {
-            float[] vector = EmbeddingCodec.normalize(embeddingCodec.decode(chunk.getEmbedding()));
+            float[] vector = EmbeddingCodec.normalize(embeddingCodec.decode(chunk.getEmbeddingPayload()));
             double similarity = EmbeddingCodec.cosineSimilarity(query, vector);
             scored.add(new ScoredChunk(
                     chunk.getTicketId(), chunk.getContent(), similarity, chunk.getTicketVersion()));

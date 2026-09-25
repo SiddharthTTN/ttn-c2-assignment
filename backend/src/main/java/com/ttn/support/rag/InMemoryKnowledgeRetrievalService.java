@@ -30,10 +30,16 @@ public class InMemoryKnowledgeRetrievalService implements KnowledgeRetrievalServ
             float[] queryEmbedding, String queryText, int topK, double similarityThreshold) {
         List<RetrievedChunk> exactMatches =
                 exactTicketChunkRetriever.retrieveForQuestion(queryEmbedding, queryText, topK);
-        List<RetrievedChunk> similarityMatches = retrieveBySimilarity(queryEmbedding, queryText, topK, similarityThreshold);
+        List<RetrievedChunk> similarityMatches =
+                retrieveBySimilarity(queryEmbedding, queryText, topK, similarityThreshold);
         return RetrievedChunkMerger.merge(exactMatches, similarityMatches, topK);
     }
 
+    /**
+     * Test/H2 profile only. Production PostgreSQL retrieval applies the same similarity threshold directly
+     * against pgvector without a lexical prefilter; deterministic hash embeddings rarely reach 0.75 cosine
+     * similarity for broad questions, so the prefilter keeps integration tests aligned on threshold semantics.
+     */
     private List<RetrievedChunk> retrieveBySimilarity(
             float[] queryEmbedding, String queryText, int topK, double similarityThreshold) {
         float[] query = EmbeddingCodec.normalize(queryEmbedding);
@@ -42,7 +48,7 @@ public class InMemoryKnowledgeRetrievalService implements KnowledgeRetrievalServ
             if (!sharesSignificantToken(queryText, chunk.getContent())) {
                 continue;
             }
-            float[] vector = EmbeddingCodec.normalize(embeddingCodec.decode(chunk.getEmbedding()));
+            float[] vector = EmbeddingCodec.normalize(embeddingCodec.decode(chunk.getEmbeddingPayload()));
             double similarity = EmbeddingCodec.cosineSimilarity(query, vector);
             if (similarity >= similarityThreshold) {
                 scored.add(new Scored(chunk.getTicketId(), chunk.getContent(), similarity, chunk.getTicketVersion()));

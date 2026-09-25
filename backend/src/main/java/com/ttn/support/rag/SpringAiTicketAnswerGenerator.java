@@ -3,7 +3,6 @@ package com.ttn.support.rag;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -40,13 +39,20 @@ public class SpringAiTicketAnswerGenerator implements TicketAnswerGenerator {
                 Context:
                 %s
                 """.formatted(question, context);
-        String output = chatModel.call(new Prompt(prompt)).getResult().getOutput().getText();
-        return parseOutput(output, allowedTicketIds);
+        try {
+            String output = chatModel.call(new Prompt(prompt)).getResult().getOutput().getText();
+            return parseOutput(output, allowedTicketIds);
+        } catch (RuntimeException ex) {
+            throw ModelInfrastructureExceptionMapper.toModelUnavailable("answer generation", ex);
+        }
     }
 
-    private GeneratedAnswer parseOutput(String output, Set<String> allowed) {
+    GeneratedAnswer parseOutput(String output, Set<String> allowed) {
         try {
             JsonNode node = objectMapper.readTree(output.trim());
+            if (!node.isObject()) {
+                return noMatch();
+            }
             String answer = node.path("answer").asText("");
             List<String> ids = new ArrayList<>();
             if (node.has("ticketIds") && node.get("ticketIds").isArray()) {
@@ -54,20 +60,15 @@ public class SpringAiTicketAnswerGenerator implements TicketAnswerGenerator {
             }
             List<String> valid = ids.stream().filter(allowed::contains).distinct().toList();
             if (valid.isEmpty() || answer.isBlank()) {
-                return new GeneratedAnswer("no relevant tickets found", List.of());
+                return noMatch();
             }
             return new GeneratedAnswer(answer, valid);
         } catch (Exception e) {
-            LinkedHashSet<String> found = new LinkedHashSet<>();
-            for (String ticketId : allowed) {
-                if (output.contains(ticketId)) {
-                    found.add(ticketId);
-                }
-            }
-            if (found.isEmpty()) {
-                return new GeneratedAnswer("no relevant tickets found", List.of());
-            }
-            return new GeneratedAnswer(output.trim(), List.copyOf(found));
+            return noMatch();
         }
+    }
+
+    private static GeneratedAnswer noMatch() {
+        return new GeneratedAnswer("no relevant tickets found", List.of());
     }
 }

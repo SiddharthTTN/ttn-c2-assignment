@@ -53,6 +53,50 @@ class StatusTransitionMatrixTest {
         assertTransition(id, TicketStatus.from(target), expectedStatus);
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "CLOSED,200",
+        "OPEN,409",
+        "IN_PROGRESS,409",
+        "CANCELLED,409"
+    })
+    void resolvedTransitions(String target, int expectedStatus) throws Exception {
+        String id = createTicket();
+        assertTransition(id, TicketStatus.IN_PROGRESS, 200);
+        assertTransition(id, TicketStatus.RESOLVED, 200);
+        assertTransition(id, TicketStatus.from(target), expectedStatus);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "OPEN,409",
+        "IN_PROGRESS,409",
+        "RESOLVED,409",
+        "CLOSED,409",
+        "CANCELLED,409"
+    })
+    void closedIsTerminal(String target, int expectedStatus) throws Exception {
+        String id = createTicket();
+        assertTransition(id, TicketStatus.IN_PROGRESS, 200);
+        assertTransition(id, TicketStatus.RESOLVED, 200);
+        assertTransition(id, TicketStatus.CLOSED, 200);
+        assertTransition(id, TicketStatus.from(target), expectedStatus);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "OPEN,409",
+        "IN_PROGRESS,409",
+        "RESOLVED,409",
+        "CLOSED,409",
+        "CANCELLED,409"
+    })
+    void cancelledIsTerminal(String target, int expectedStatus) throws Exception {
+        String id = createTicket();
+        assertTransition(id, TicketStatus.CANCELLED, 200);
+        assertTransition(id, TicketStatus.from(target), expectedStatus);
+    }
+
     private String createTicket() throws Exception {
         CreateTicketRequest request = new CreateTicketRequest();
         request.setTitle("Transition matrix ticket");

@@ -28,7 +28,7 @@ describe('TicketListPage', () => {
       mockJsonResponse({ items: [] }),
     )
 
-    renderWithProviders(<TicketListPage />)
+    renderWithProviders(<TicketListPage />, { initialEntries: ['/tickets'] })
 
     expect(await screen.findByText('No tickets yet')).toBeInTheDocument()
   })
@@ -39,7 +39,7 @@ describe('TicketListPage', () => {
     )
 
     const user = userEvent.setup()
-    renderWithProviders(<TicketListPage />)
+    renderWithProviders(<TicketListPage />, { initialEntries: ['/tickets'] })
 
     await user.type(screen.getByLabelText('Search tickets'), 'missing')
 
@@ -56,7 +56,7 @@ describe('TicketListPage', () => {
       ),
     )
 
-    renderWithProviders(<TicketListPage />)
+    renderWithProviders(<TicketListPage />, { initialEntries: ['/tickets'] })
 
     expect(await screen.findByText('Validation failed')).toBeInTheDocument()
   })
@@ -66,7 +66,7 @@ describe('TicketListPage', () => {
       mockJsonResponse({ items: [sampleTicket] }),
     )
 
-    renderWithProviders(<TicketListPage />)
+    renderWithProviders(<TicketListPage />, { initialEntries: ['/tickets'] })
 
     expect(await screen.findByRole('link', { name: 'TKT-1001' })).toBeInTheDocument()
     expect(screen.getByText('Payment failed at checkout')).toBeInTheDocument()

@@ -92,7 +92,12 @@ public class TicketService {
     @Transactional
     public TicketResponse update(String id, UpdateTicketRequest request) {
         updateTicketRequestValidator.validate(request);
-        Ticket ticket = ticketRepository.findById(id).orElseThrow(() -> new NotFoundException("Ticket not found"));
+        Ticket ticket;
+        try {
+            ticket = ticketRepository.findById(id).orElseThrow(() -> new NotFoundException("Ticket not found"));
+        } catch (OptimisticLockException | ObjectOptimisticLockingFailureException ex) {
+            throw new ConflictException("Ticket was updated concurrently");
+        }
         boolean changed = false;
         if (request.isTitlePresent()) {
             ticket.setTitle(request.getTitle());
@@ -122,8 +127,13 @@ public class TicketService {
             ticket.setKnowledgeVersion(ticket.getKnowledgeVersion() + 1);
             ticket.setKnowledgeState(KnowledgeState.PENDING);
             ticket.setKnowledgeRetryCount(0);
+            ticket.setKnowledgeNextRetryAt(null);
             ticket.setUpdatedAt(Instant.now());
-            ticketRepository.save(ticket);
+            try {
+                ticketRepository.save(ticket);
+            } catch (OptimisticLockException | ObjectOptimisticLockingFailureException ex) {
+                throw new ConflictException("Ticket was updated concurrently");
+            }
             knowledgeRefreshPublisher.scheduleAfterCommit(ticket.getId());
         }
         List<TicketComment> comments = commentRepository.findByTicketIdOrderByCreatedAtAscIdAsc(id);
@@ -146,6 +156,7 @@ public class TicketService {
                 ticket.setKnowledgeVersion(ticket.getKnowledgeVersion() + 1);
                 ticket.setKnowledgeState(KnowledgeState.PENDING);
                 ticket.setKnowledgeRetryCount(0);
+                ticket.setKnowledgeNextRetryAt(null);
                 ticket.setUpdatedAt(Instant.now());
                 ticketRepository.save(ticket);
                 knowledgeRefreshPublisher.scheduleAfterCommit(ticket.getId());
@@ -159,7 +170,12 @@ public class TicketService {
 
     @Transactional
     public CommentResponse addComment(String id, String body) {
-        Ticket ticket = ticketRepository.findById(id).orElseThrow(() -> new NotFoundException("Ticket not found"));
+        Ticket ticket;
+        try {
+            ticket = ticketRepository.findById(id).orElseThrow(() -> new NotFoundException("Ticket not found"));
+        } catch (OptimisticLockException | ObjectOptimisticLockingFailureException ex) {
+            throw new ConflictException("Ticket was updated concurrently");
+        }
         TicketComment comment = new TicketComment();
         comment.setTicketId(id);
         comment.setBody(body);
@@ -168,8 +184,13 @@ public class TicketService {
         ticket.setKnowledgeVersion(ticket.getKnowledgeVersion() + 1);
         ticket.setKnowledgeState(KnowledgeState.PENDING);
         ticket.setKnowledgeRetryCount(0);
+        ticket.setKnowledgeNextRetryAt(null);
         ticket.setUpdatedAt(Instant.now());
-        ticketRepository.save(ticket);
+        try {
+            ticketRepository.save(ticket);
+        } catch (OptimisticLockException | ObjectOptimisticLockingFailureException ex) {
+            throw new ConflictException("Ticket was updated concurrently");
+        }
         knowledgeRefreshPublisher.scheduleAfterCommit(id);
         return CommentResponse.from(comment);
     }

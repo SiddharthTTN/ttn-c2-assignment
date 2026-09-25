@@ -59,4 +59,13 @@ class AskApiIntegrationTest {
                         .content("{\"question\":\"   \"}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void rejectsQuestionLongerThan2000Characters() throws Exception {
+        String question = "q".repeat(2001);
+        mockMvc.perform(post("/api/ai/ask")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\"" + question + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
 }

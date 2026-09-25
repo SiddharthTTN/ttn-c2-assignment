@@ -106,16 +106,18 @@ public class KnowledgeRefreshService {
                 knowledge.setAssignee(ticket.getAssignee());
                 knowledge.setCategory(ticket.getCategory());
                 knowledge.setCreatedAt(now);
+                String payload = embeddingCodec.encode(embeddings.get(i));
                 if (isPostgresProfile()) {
-                    insertPgVectorRow(knowledge, embeddings.get(i));
+                    insertPgVectorRow(knowledge, payload, embeddings.get(i));
                 } else {
-                    knowledge.setEmbedding(embeddingCodec.encode(embeddings.get(i)));
+                    knowledge.setEmbeddingPayload(payload);
                     knowledgeRepository.save(knowledge);
                 }
             }
 
             ticket.setKnowledgeState(KnowledgeState.READY);
             ticket.setKnowledgeRetryCount(0);
+            ticket.setKnowledgeNextRetryAt(null);
             ticket.setUpdatedAt(Instant.now());
             ticketRepository.save(ticket);
             log.info("Knowledge refresh succeeded ticketId={} version={}", ticketId, ticket.getKnowledgeVersion());
@@ -126,17 +128,18 @@ public class KnowledgeRefreshService {
         }
     }
 
-    private void insertPgVectorRow(TicketKnowledge knowledge, float[] embedding) {
+    private void insertPgVectorRow(TicketKnowledge knowledge, String embeddingPayload, float[] embedding) {
         String vector = EmbeddingCodec.toPgVectorLiteral(EmbeddingCodec.normalize(embedding));
         entityManager
                 .createNativeQuery(
                         """
                         INSERT INTO ticket_knowledge (
                           id, ticket_id, source_type, source_id, chunk_index, content, content_hash,
-                          ticket_version, status, priority, assignee, category, embedding, created_at
+                          ticket_version, status, priority, assignee, category, embedding_payload, embedding, created_at
                         ) VALUES (
                           :id, :ticketId, :sourceType, :sourceId, :chunkIndex, :content, :contentHash,
-                          :ticketVersion, :status, :priority, :assignee, :category, CAST(:embedding AS vector), :createdAt
+                          :ticketVersion, :status, :priority, :assignee, :category, :embeddingPayload,
+                          CAST(:embedding AS vector), :createdAt
                         )
                         """)
                 .setParameter("id", knowledge.getId())
@@ -151,6 +154,7 @@ public class KnowledgeRefreshService {
                 .setParameter("priority", knowledge.getPriority())
                 .setParameter("assignee", knowledge.getAssignee())
                 .setParameter("category", knowledge.getCategory())
+                .setParameter("embeddingPayload", embeddingPayload)
                 .setParameter("embedding", vector)
                 .setParameter("createdAt", knowledge.getCreatedAt())
                 .executeUpdate();

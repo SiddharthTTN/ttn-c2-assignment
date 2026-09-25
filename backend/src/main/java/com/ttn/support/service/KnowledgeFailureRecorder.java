@@ -13,11 +13,15 @@ public class KnowledgeFailureRecorder {
 
     private final TicketRepository ticketRepository;
     private final KnowledgeRetryProperties knowledgeRetryProperties;
+    private final KnowledgeRetryBackoff knowledgeRetryBackoff;
 
     public KnowledgeFailureRecorder(
-            TicketRepository ticketRepository, KnowledgeRetryProperties knowledgeRetryProperties) {
+            TicketRepository ticketRepository,
+            KnowledgeRetryProperties knowledgeRetryProperties,
+            KnowledgeRetryBackoff knowledgeRetryBackoff) {
         this.ticketRepository = ticketRepository;
         this.knowledgeRetryProperties = knowledgeRetryProperties;
+        this.knowledgeRetryBackoff = knowledgeRetryBackoff;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -30,8 +34,10 @@ public class KnowledgeFailureRecorder {
         ticket.setKnowledgeRetryCount(nextAttempt);
         if (nextAttempt >= knowledgeRetryProperties.getMaxAttempts()) {
             ticket.setKnowledgeState(KnowledgeState.FAILED);
+            ticket.setKnowledgeNextRetryAt(null);
         } else {
             ticket.setKnowledgeState(KnowledgeState.PENDING);
+            ticket.setKnowledgeNextRetryAt(knowledgeRetryBackoff.nextRetryAt(nextAttempt));
         }
         ticketRepository.save(ticket);
     }
