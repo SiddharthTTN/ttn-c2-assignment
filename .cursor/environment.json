@@ -1,5 +1,6 @@
 {
   "name": "Grounded Support Tickets",
+  "chromeExecutablePath": "/usr/local/bin/google-chrome",
   "install": "bash .cursor/scripts/cloud-agent-install.sh",
   "start": "bash .cursor/scripts/cloud-agent-start.sh",
   "terminals": [
