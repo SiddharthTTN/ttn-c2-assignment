@@ -6,5 +6,6 @@
 - Contract tests: every API success/error shape and `/swagger`.
 - RAG evaluation: deterministic fake models plus a seed corpus covering payment, TKT-1001 resolution, shipment tracking, high-priority payment, unsupported questions, and attempted unsupported citations.
 - Frontend tests: the real data-router route tree covers list/create/details/edit/comment/status/ask paths, post-create and citation navigation, unsaved-change blocking, error association, keyboard navigation, and empty/no-match states.
+- Coverage gates: JaCoCo enforces at least 70% backend line coverage during Maven `verify`; Vitest V8 coverage enforces at least 70% statements, branches, functions, and lines. Docker CI runs both gates with zero skipped backend tests.
 - Performance checks: a repeatable H2 integration benchmark loads 1,000 tickets and enforces p95 list, details, and update operations under 500 ms. The total ask deadline is tested independently; production PostgreSQL and live Ollama p95 measurements remain required before production sign-off.
 - Hygiene checks: required steering/spec/history files, secret scan, and a documented real AI mistake before completion.
