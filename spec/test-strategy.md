@@ -2,7 +2,7 @@
 
 - Unit tests: validators, ticket-id formatting, every state transition pair, chunking, no-match threshold, citation intersection, and error mapping.
 - Repository tests: JPA constraints, chronological comments, full-text search, status filter, and restart persistence.
-- PostgreSQL contract tests: Flyway retains `vector(768)` plus HNSW cosine indexing, the entity excludes the vector column, and the native refresh insert writes both serialized payload and vector values. An executable PostgreSQL/PGVector Testcontainers suite covers migration startup, vector replacement, stale-version exclusion, and configured top-K/cutoff. The backend CI workflow runs the suite on a Docker-enabled runner; environments without Docker skip it, so a successful CI run remains required before production sign-off.
+- PostgreSQL contract tests: Flyway retains `vector(768)` plus HNSW cosine indexing, the entity excludes the vector column, and the native refresh insert writes both serialized payload and vector values. An executable PostgreSQL/PGVector Testcontainers suite covers migration startup, vector replacement, stale-version exclusion, and configured top-K/cutoff. Environments without Docker skip it. Docker-enabled GitHub Actions now runs the suite to completion.
 - Contract tests: every API success/error shape and `/swagger`.
 - RAG evaluation: deterministic fake models plus a seed corpus covering payment, TKT-1001 resolution, shipment tracking, high-priority payment, unsupported questions, and attempted unsupported citations.
 - Frontend tests: the real data-router route tree covers list/create/details/edit/comment/status/ask paths, post-create and citation navigation, unsaved-change blocking, error association, keyboard navigation, and empty/no-match states.

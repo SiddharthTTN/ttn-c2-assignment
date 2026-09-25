@@ -29,3 +29,8 @@
 **Ask:** Resolve the reviewer’s stale-refresh, retry timing, asynchronous dispatch, total ask deadline, production validation, optimistic-lock, dialog focus, and data-type findings.
 **Did:** Applied only the requested implementation and specification corrections, added focused concurrency, deadline, persistence, performance, startup, and UI regressions, and reran all locally available validation.
 **Artifacts:** `backend/`, `frontend/`, `.github/workflows/backend.yml`, `spec/data-model.md`, `spec/error-handling.md`, `spec/integrations.md`, `spec/rag-ingestion.md`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
+
+## 2026-09-25T11:16:00Z — development — attempt 1
+**Ask:** Fix PostgreSQL Hibernate TEXT mapping so PGVector CI can start, complete production-profile acceptance evidence, and pin the current PR commit.
+**Did:** Mapped schema text columns as LONGVARCHAR instead of @Lob, aligned H2, recorded a passing Docker PGVector CI run, and updated the complete development summary.
+**Artifacts:** `backend/src/main/java/com/ttn/support/domain/`, `backend/src/main/resources/db/migration/h2/V1__schema.sql`, `spec/data-model.md`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
