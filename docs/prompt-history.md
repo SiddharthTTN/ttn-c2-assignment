@@ -34,3 +34,8 @@
 **Ask:** Fix PostgreSQL Hibernate TEXT mapping so PGVector CI can start, complete production-profile acceptance evidence, and pin the current PR commit.
 **Did:** Mapped schema text columns as LONGVARCHAR instead of @Lob, aligned H2, recorded a passing Docker PGVector CI run, and updated the complete development summary.
 **Artifacts:** `backend/src/main/java/com/ttn/support/domain/`, `backend/src/main/resources/db/migration/h2/V1__schema.sql`, `spec/data-model.md`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
+
+## 2026-09-25T11:22:18Z — development — attempt 1
+**Ask:** Record successful production-profile PGVector acceptance, retain explicit live-model and latency boundaries, and pin the current delivery commit.
+**Did:** Verified green Docker-enabled PGVector CI evidence, preserved the remaining Ollama and production-latency caveats, and refreshed the complete development summary.
+**Artifacts:** `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
