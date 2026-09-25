@@ -44,3 +44,8 @@
 **Ask:** Check CI for PRs #1 and #2, fix any failures, and produce the complete v1 test report.
 **Did:** Confirmed PR #2 CI green, recorded that PR #1 has no configured checks, reran backend and frontend validation, and documented test and coverage evidence.
 **Artifacts:** `docs/prompt-history.md`, `artifacts/06-test-results-v1.md`
+
+## 2026-09-25T11:30:56Z — testing — attempt 2
+**Ask:** Eliminate skipped acceptance results and add measured coverage evidence meeting the default 70% threshold.
+**Did:** Added JaCoCo and Vitest coverage gates, expanded backend branch tests, ran zero-skip local and Docker CI suites, and revised the complete test report.
+**Artifacts:** `.github/workflows/backend.yml`, `backend/pom.xml`, `backend/src/test/`, `frontend/package.json`, `frontend/vite.config.ts`, `frontend/eslint.config.js`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/06-test-results-v1.md`
