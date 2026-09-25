@@ -23,16 +23,30 @@ public class DeterministicTicketAnswerGenerator implements TicketAnswerGenerator
 
     @Override
     public GeneratedAnswer generate(String question, List<RetrievedChunk> chunks, Set<String> allowedTicketIds) {
-        List<String> cited = rankTicketsByOverlap(question, chunks, allowedTicketIds);
+        List<String> cited = citeExplicitTicketIds(question, allowedTicketIds);
+        if (cited.isEmpty()) {
+            cited = rankTicketsByOverlap(question, chunks, allowedTicketIds);
+        }
         if (cited.isEmpty()) {
             return new GeneratedAnswer("no relevant tickets found", List.of());
         }
+        final String primaryTicketId = cited.get(0);
         String context = chunks.stream()
-                .filter(chunk -> chunk.ticketId().equals(cited.get(0)))
+                .filter(chunk -> chunk.ticketId().equals(primaryTicketId))
                 .map(RetrievedChunk::content)
                 .collect(Collectors.joining("\n"));
         String answer = summarize(context, question);
-        return new GeneratedAnswer(answer, List.of(cited.get(0)));
+        return new GeneratedAnswer(answer, List.of(primaryTicketId));
+    }
+
+    private List<String> citeExplicitTicketIds(String question, Set<String> allowedTicketIds) {
+        List<String> cited = new ArrayList<>();
+        for (String ticketId : TicketIdQuestionParser.extractTicketIds(question)) {
+            if (allowedTicketIds.contains(ticketId) && !cited.contains(ticketId)) {
+                cited.add(ticketId);
+            }
+        }
+        return cited;
     }
 
     private List<String> rankTicketsByOverlap(

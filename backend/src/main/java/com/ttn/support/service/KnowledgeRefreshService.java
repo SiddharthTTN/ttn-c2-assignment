@@ -8,6 +8,7 @@ import com.ttn.support.domain.TicketKnowledge;
 import com.ttn.support.rag.ChunkingService;
 import com.ttn.support.rag.ContentHasher;
 import com.ttn.support.rag.EmbeddingCodec;
+import com.ttn.support.rag.KnowledgeChunkFormatter;
 import com.ttn.support.rag.TicketEmbeddingService;
 import com.ttn.support.repository.TicketCommentRepository;
 import com.ttn.support.repository.TicketKnowledgeRepository;
@@ -38,6 +39,7 @@ public class KnowledgeRefreshService {
     private final EmbeddingCodec embeddingCodec;
     private final Environment environment;
     private final KnowledgeFailureRecorder knowledgeFailureRecorder;
+    private final KnowledgeChunkFormatter knowledgeChunkFormatter;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -51,7 +53,8 @@ public class KnowledgeRefreshService {
             TicketEmbeddingService embeddingService,
             EmbeddingCodec embeddingCodec,
             Environment environment,
-            KnowledgeFailureRecorder knowledgeFailureRecorder) {
+            KnowledgeFailureRecorder knowledgeFailureRecorder,
+            KnowledgeChunkFormatter knowledgeChunkFormatter) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.knowledgeRepository = knowledgeRepository;
@@ -61,6 +64,7 @@ public class KnowledgeRefreshService {
         this.embeddingCodec = embeddingCodec;
         this.environment = environment;
         this.knowledgeFailureRecorder = knowledgeFailureRecorder;
+        this.knowledgeChunkFormatter = knowledgeChunkFormatter;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -179,7 +183,7 @@ public class KnowledgeRefreshService {
                     sourceType,
                     sourceId,
                     i,
-                    ticket.getId() + " " + content));
+                    knowledgeChunkFormatter.formatChunk(ticket, sourceType, content)));
         }
     }
 

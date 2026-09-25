@@ -14,15 +14,27 @@ public class InMemoryKnowledgeRetrievalService implements KnowledgeRetrievalServ
 
     private final TicketKnowledgeRepository knowledgeRepository;
     private final EmbeddingCodec embeddingCodec;
+    private final ExactTicketChunkRetriever exactTicketChunkRetriever;
 
     public InMemoryKnowledgeRetrievalService(
-            TicketKnowledgeRepository knowledgeRepository, EmbeddingCodec embeddingCodec) {
+            TicketKnowledgeRepository knowledgeRepository,
+            EmbeddingCodec embeddingCodec,
+            ExactTicketChunkRetriever exactTicketChunkRetriever) {
         this.knowledgeRepository = knowledgeRepository;
         this.embeddingCodec = embeddingCodec;
+        this.exactTicketChunkRetriever = exactTicketChunkRetriever;
     }
 
     @Override
     public List<RetrievedChunk> retrieve(
+            float[] queryEmbedding, String queryText, int topK, double similarityThreshold) {
+        List<RetrievedChunk> exactMatches =
+                exactTicketChunkRetriever.retrieveForQuestion(queryEmbedding, queryText, topK);
+        List<RetrievedChunk> similarityMatches = retrieveBySimilarity(queryEmbedding, queryText, topK, similarityThreshold);
+        return RetrievedChunkMerger.merge(exactMatches, similarityMatches, topK);
+    }
+
+    private List<RetrievedChunk> retrieveBySimilarity(
             float[] queryEmbedding, String queryText, int topK, double similarityThreshold) {
         float[] query = EmbeddingCodec.normalize(queryEmbedding);
         List<Scored> scored = new ArrayList<>();
