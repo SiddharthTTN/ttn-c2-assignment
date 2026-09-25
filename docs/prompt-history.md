@@ -39,3 +39,8 @@
 **Ask:** Record successful production-profile PGVector acceptance, retain explicit live-model and latency boundaries, and pin the current delivery commit.
 **Did:** Verified green Docker-enabled PGVector CI evidence, preserved the remaining Ollama and production-latency caveats, and refreshed the complete development summary.
 **Artifacts:** `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
+
+## 2026-09-25T11:26:38Z — testing — attempt 1
+**Ask:** Check CI for PRs #1 and #2, fix any failures, and produce the complete v1 test report.
+**Did:** Confirmed PR #2 CI green, recorded that PR #1 has no configured checks, reran backend and frontend validation, and documented test and coverage evidence.
+**Artifacts:** `docs/prompt-history.md`, `artifacts/06-test-results-v1.md`
