@@ -13,6 +13,7 @@
 - `knowledge_state varchar(16)` not null default `PENDING`
 - `knowledge_version bigint` not null default 0
 - `knowledge_retry_count integer` not null default 0
+- `knowledge_next_retry_at timestamptz` nullable; populated only while a failed refresh is waiting for its next capped-backoff attempt
 - `created_at timestamptz`, `updated_at timestamptz` not null
 
 Indexes: status, priority, updated_at; enable `pg_trgm` and add GIN trigram indexes on `lower(title)` and `lower(description)`. Keyword search escapes wildcard characters and performs case-insensitive literal substring matching against either field.
@@ -34,9 +35,10 @@ Index: `(ticket_id, created_at, id)`.
 - `content text`, `content_hash char(64)` not null
 - `ticket_version bigint` not null
 - metadata columns: `status`, `priority`, `assignee`, `category`
+- `embedding_payload text` not null; normalized serialization used only by deterministic H2 retrieval and exact-ticket chunk loading
 - `embedding vector(768)` not null for the default `nomic-embed-text` profile
 - `created_at timestamptz` not null
 
-Unique `(ticket_id, source_type, source_id, chunk_index)`; indexes on ticket id and an HNSW cosine index on embedding. Changing embedding dimensions requires a matching migration and complete re-index.
+Unique `(ticket_id, source_type, source_id, chunk_index)`; indexes on ticket id and an HNSW cosine index on embedding. JPA maps `embedding_payload`, not the PostgreSQL vector column; PostgreSQL refresh writes both columns in one native insert and PGVector similarity SQL reads only `embedding`. Changing embedding dimensions requires a matching migration and complete re-index.
 
-Ticket ids are immutable. State changes use optimistic locking or a row lock so concurrent transitions cannot bypass the state machine.
+Ticket ids are immutable. The single ticket-number row is selected `FOR UPDATE` and incremented in one transaction before formatting `TKT-<n>`. State changes use optimistic locking or a row lock so concurrent transitions cannot bypass the state machine.
