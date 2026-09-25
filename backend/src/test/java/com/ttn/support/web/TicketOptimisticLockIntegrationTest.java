@@ -38,7 +38,8 @@ class TicketOptimisticLockIntegrationTest {
     void patchMapsOptimisticLockConflictTo409() {
         Ticket ticket = sampleTicket("TKT-9001");
         when(ticketRepository.findById("TKT-9001")).thenReturn(Optional.of(ticket));
-        when(ticketRepository.save(any())).thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9001"));
+        when(ticketRepository.saveAndFlush(any()))
+                .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9001"));
         when(commentRepository.findByTicketIdOrderByCreatedAtAscIdAsc("TKT-9001")).thenReturn(List.of());
 
         UpdateTicketRequest request = new UpdateTicketRequest();
@@ -52,7 +53,8 @@ class TicketOptimisticLockIntegrationTest {
     void commentMapsOptimisticLockConflictTo409() {
         Ticket ticket = sampleTicket("TKT-9002");
         when(ticketRepository.findById("TKT-9002")).thenReturn(Optional.of(ticket));
-        when(ticketRepository.save(any())).thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9002"));
+        when(ticketRepository.saveAndFlush(any()))
+                .thenThrow(new ObjectOptimisticLockingFailureException(Ticket.class, "TKT-9002"));
 
         assertThrows(ConflictException.class, () -> ticketService.addComment("TKT-9002", "body"));
     }

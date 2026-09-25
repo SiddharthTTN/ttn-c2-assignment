@@ -130,7 +130,7 @@ public class TicketService {
             ticket.setKnowledgeNextRetryAt(null);
             ticket.setUpdatedAt(Instant.now());
             try {
-                ticketRepository.save(ticket);
+                ticketRepository.saveAndFlush(ticket);
             } catch (OptimisticLockException | ObjectOptimisticLockingFailureException ex) {
                 throw new ConflictException("Ticket was updated concurrently");
             }
@@ -158,7 +158,7 @@ public class TicketService {
                 ticket.setKnowledgeRetryCount(0);
                 ticket.setKnowledgeNextRetryAt(null);
                 ticket.setUpdatedAt(Instant.now());
-                ticketRepository.save(ticket);
+                ticketRepository.saveAndFlush(ticket);
                 knowledgeRefreshPublisher.scheduleAfterCommit(ticket.getId());
             }
         } catch (OptimisticLockException | ObjectOptimisticLockingFailureException ex) {
@@ -187,7 +187,7 @@ public class TicketService {
         ticket.setKnowledgeNextRetryAt(null);
         ticket.setUpdatedAt(Instant.now());
         try {
-            ticketRepository.save(ticket);
+            ticketRepository.saveAndFlush(ticket);
         } catch (OptimisticLockException | ObjectOptimisticLockingFailureException ex) {
             throw new ConflictException("Ticket was updated concurrently");
         }
