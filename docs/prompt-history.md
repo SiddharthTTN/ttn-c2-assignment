@@ -19,3 +19,8 @@
 **Ask:** Revise the implementation and complete development summary to resolve the reviewer’s routing, vector mapping, concurrency, grounding, conflict, testing, error, retry, and validation findings.
 **Did:** Corrected only the flagged backend and frontend paths, added focused regression coverage, ran the full local validation suites, and made production-profile validation limits explicit.
 **Artifacts:** `backend/`, `frontend/`, `spec/data-model.md`, `spec/error-handling.md`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
+
+## 2026-09-25T10:16:00Z — development — attempt 3
+**Ask:** Resolve the cached-detail, PostgreSQL migration/runtime, provider-boundary, refresh-lock, integration-test, specification, and UI polish findings.
+**Did:** Applied only the flagged fixes, added targeted route, HTTP conflict, transaction-boundary, dimension, migration, and PGVector integration coverage, and reran the complete local suites.
+**Artifacts:** `backend/`, `frontend/`, `Makefile`, `spec/api-contract.md`, `spec/integrations.md`, `spec/rag-ingestion.md`, `spec/test-strategy.md`, `docs/prompt-history.md`, `artifacts/05-development-summary-v1.md`
