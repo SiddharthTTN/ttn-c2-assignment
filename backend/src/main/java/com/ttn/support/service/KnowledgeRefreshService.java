@@ -75,6 +75,10 @@ public class KnowledgeRefreshService {
     }
 
     public void refreshTicket(String ticketId) {
+        refreshTicket(ticketId, true);
+    }
+
+    private void refreshTicket(String ticketId, boolean refreshOneNewerVersion) {
         RefreshPlan plan = transactionTemplate.execute(status -> loadRefreshPlan(ticketId));
         if (plan == null) {
             return;
@@ -96,7 +100,9 @@ public class KnowledgeRefreshService {
                         "Skipped stale knowledge refresh ticketId={} expectedVersion={}",
                         ticketId,
                         plan.knowledgeVersion());
-                refreshNewerPendingVersion(ticketId, plan.knowledgeVersion());
+                if (refreshOneNewerVersion) {
+                    refreshNewerPendingVersion(ticketId, plan.knowledgeVersion());
+                }
                 return;
             }
             log.info(
@@ -252,7 +258,7 @@ public class KnowledgeRefreshService {
     private void refreshNewerPendingVersion(String ticketId, long staleVersion) {
         RefreshPlan newerPlan = transactionTemplate.execute(status -> loadRefreshPlan(ticketId));
         if (newerPlan != null && newerPlan.knowledgeVersion() != staleVersion) {
-            refreshTicket(ticketId);
+            refreshTicket(ticketId, false);
         }
     }
 

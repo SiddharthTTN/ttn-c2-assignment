@@ -8,10 +8,8 @@ import com.ttn.support.rag.KnowledgeRetrievalService;
 import com.ttn.support.rag.RetrievedChunk;
 import com.ttn.support.rag.TicketAnswerGenerator;
 import com.ttn.support.rag.TicketEmbeddingService;
-import com.ttn.support.service.KnowledgeRefreshService;
 import com.ttn.support.web.error.ModelUnavailableException;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -32,15 +30,7 @@ class AskServiceErrorMappingTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private KnowledgeRefreshService knowledgeRefreshService;
-
-    @Autowired
     private ErrorMode errorMode;
-
-    @BeforeEach
-    void refreshSeed() {
-        knowledgeRefreshService.refreshTicket("TKT-1001");
-    }
 
     @Test
     void returns503OnlyForModelUnavailable() throws Exception {
